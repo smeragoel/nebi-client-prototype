@@ -1,0 +1,20 @@
+{
+  "_comment": "Maps prototype screens to Figma frames. File: Nebi UI (Wu8VTFA5IO5BjbvifZJMyZ). Node IDs from nebi-brain/figma.md, 2026-09-25. Re-check before relying on them; IDs change when frames are rebuilt.",
+  "fileKey": "Wu8VTFA5IO5BjbvifZJMyZ",
+  "screens": {
+    "ProjectsList": "1774:2940",
+    "CreateProject": "2309:16943",
+    "ProjectDetailsInstalled": "2898:9525",
+    "ProjectDetailsOtherVersion": "2903:8908",
+    "VersionRowRedesign": "2940:11386",
+    "CreateNewVersion": "2914:9164",
+    "OlderBaseConfirm": "2916:9418",
+    "PublishModal": "2917:9592",
+    "PublishAfterSave": "2922:10106",
+    "ServerAhead": "2917:24512",
+    "UninstallConfirm": "2923:24190",
+    "Installing": "2925:10612",
+    "JustCreated": "2925:11253",
+    "InSync": "2925:25499"
+  }
+}
