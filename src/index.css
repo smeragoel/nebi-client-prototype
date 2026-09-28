@@ -323,3 +323,16 @@
     @apply bg-canvas font-sans text-foreground antialiased;
   }
 }
+
+/* App-owned header tokens (NDS header recipe). Keep below the Nebari theme blocks. */
+:root {
+  --header-action-hover: #d9d9dc;
+}
+
+.dark {
+  --header-action-hover: #4a4a50;
+}
+
+@theme inline {
+  --color-header-action-hover: var(--header-action-hover);
+}

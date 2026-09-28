@@ -1,7 +1,8 @@
 import { BookOpen, Boxes, ExternalLink, Package, Server } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import nebiMark from '@/assets/nebi-mark.svg'
-import { MenuBarBrand, MenuBarNav, NavigationMenu, NavLink } from '@/components/ui/navigation-menu'
+import { ThemeMenu } from '@/components/ThemeMenu'
+import { MenuBarActions, MenuBarBrand, MenuBarNav, NavigationMenu, NavLink } from '@/components/ui/navigation-menu'
 import { cn } from '@/lib/utils'
 import { notBuilt } from '@/state/store'
 
@@ -65,6 +66,9 @@ export function AppHeader() {
           </span>
         </NavLink>
       </MenuBarNav>
+      <MenuBarActions className="gap-2">
+        <ThemeMenu />
+      </MenuBarActions>
     </NavigationMenu>
   )
 }
