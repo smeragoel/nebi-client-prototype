@@ -1,28 +1,16 @@
-import { CodeXml, FolderOpen, LayoutPanelTop, Plus, Trash2 } from 'lucide-react'
-import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { CodeXml, FolderOpen, LayoutPanelTop } from 'lucide-react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { FormField, NAME_PATTERN, PackagesEditor, PlatformsField } from '@/components/form/fields'
 import { TomlEditor } from '@/components/TomlEditor'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
-import {
-  Combobox,
-  ComboboxChip,
-  ComboboxChips,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxValue,
-} from '@/components/ui/combobox'
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from '@/components/ui/toast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { RequestedPackage } from '@/data/sample'
-import { isPlatformName, KNOWN_PLATFORMS, platformLabel, thisMachinePlatform } from '@/lib/platforms'
+import { thisMachinePlatform } from '@/lib/platforms'
 import { draftToToml, parseToml, withTomlName } from '@/lib/toml'
 import { notBuilt, useStore } from '@/state/store'
 
@@ -30,7 +18,6 @@ type Mode = 'gui' | 'toml'
 
 const DEFAULT_CHANNELS = ['conda-forge']
 const DEFAULT_PACKAGES: RequestedPackage[] = [{ name: 'python', constraint: '>=3.11' }]
-const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 /**
@@ -262,7 +249,8 @@ export default function CreateProject() {
           </div>
         )}
 
-        <footer className="mt-auto flex items-center justify-between gap-4 border-border border-t py-3 pb-12">
+        {/* Sticky so Create is always in reach on a long package list. */}
+        <footer className="sticky bottom-0 z-10 -mx-12 mt-auto flex items-center justify-between gap-4 border-border border-t bg-canvas px-12 py-4">
           <Button type="button" variant="ghost" onClick={() => leave('/')}>
             Cancel
           </Button>
@@ -290,239 +278,5 @@ export default function CreateProject() {
         </DialogContent>
       </Dialog>
     </main>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-
-function FormField({
-  label,
-  description,
-  error,
-  children,
-}: {
-  label: string
-  description?: string
-  error?: string | null
-  children: ReactNode
-}) {
-  return (
-    <Field invalid={!!error} className="w-[612px] max-w-full gap-1">
-      <FieldLabel className="text-foreground">{label}</FieldLabel>
-      {children}
-      {error ? (
-        <FieldError match className="text-xs">
-          {error}
-        </FieldError>
-      ) : (
-        description && <FieldDescription>{description}</FieldDescription>
-      )}
-    </Field>
-  )
-}
-
-/** Figma `Platforms field` 2917:25100: multi-select chips, this machine first, any pixi name can be typed in. */
-function PlatformsField({
-  machine,
-  value,
-  onChange,
-  error,
-}: {
-  machine: string
-  value: string[]
-  onChange: (value: string[]) => void
-  error: string | null
-}) {
-  const [query, setQuery] = useState('')
-  const q = query.trim().toLowerCase()
-  const known = [machine, ...Object.keys(KNOWN_PLATFORMS).filter((p) => p !== machine)]
-  const custom = value.filter((p) => !known.includes(p))
-  const typed = q && isPlatformName(q) && !known.includes(q) && !custom.includes(q) ? [q] : []
-  // Filtered here rather than by Base UI so the "Add …" row and the matches always agree.
-  const items = [
-    ...[...known, ...custom].filter((id) => !q || platformLabel(id, machine).toLowerCase().includes(q)),
-    ...typed,
-  ]
-
-  return (
-    <Field invalid={!!error} className="w-[612px] max-w-full gap-1">
-      <FieldLabel className="text-foreground">Platforms</FieldLabel>
-      <Combobox
-        multiple
-        items={items}
-        filter={null}
-        autoHighlight
-        value={value}
-        onValueChange={(next) => {
-          onChange(next)
-          setQuery('')
-        }}
-        inputValue={query}
-        onInputValueChange={setQuery}
-        itemToStringLabel={(id: string) => platformLabel(id, machine)}
-      >
-        <ComboboxChips>
-          <ComboboxValue>
-            {(selected: string[]) =>
-              selected.map((id) => <ComboboxChip key={id}>{platformLabel(id, machine)}</ComboboxChip>)
-            }
-          </ComboboxValue>
-          <ComboboxInput placeholder={value.length ? '' : 'Add a platform'} />
-        </ComboboxChips>
-        <ComboboxContent>
-          <ComboboxEmpty>No match. Type pixi’s name for it, e.g. linux-ppc64le.</ComboboxEmpty>
-          <ComboboxList>
-            {(id: string) => (
-              <ComboboxItem key={id} value={id}>
-                {typed.includes(id) ? `Add “${id}”` : platformLabel(id, machine)}
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
-      {error ? (
-        <FieldError match className="text-xs">
-          {error}
-        </FieldError>
-      ) : (
-        <FieldDescription>
-          Your machine’s platform is added. For uncommon platforms, type pixi’s name (e.g. linux-ppc64le).
-        </FieldDescription>
-      )}
-    </Field>
-  )
-}
-
-/** Figma `Add Package Row` 2309:16973 + `Packages Table` 2309:16963. */
-function PackagesEditor({
-  requested,
-  onChange,
-}: {
-  requested: RequestedPackage[]
-  onChange: (next: RequestedPackage[]) => void
-}) {
-  const [pkg, setPkg] = useState('')
-  const [constraint, setConstraint] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const pkgRef = useRef<HTMLInputElement>(null)
-
-  const add = () => {
-    const n = pkg.trim().toLowerCase()
-    if (!n) {
-      setError('Enter a package name.')
-      pkgRef.current?.focus()
-      return
-    }
-    if (!NAME_PATTERN.test(n)) {
-      setError('Package names use letters, numbers, hyphens, underscores or dots.')
-      pkgRef.current?.focus()
-      return
-    }
-    const c = constraint.trim() || '*'
-    const exists = requested.some((p) => p.name === n)
-    onChange(exists ? requested.map((p) => (p.name === n ? { name: n, constraint: c } : p)) : [...requested, { name: n, constraint: c }])
-    if (exists) toast.add({ title: `Updated ${n}`, description: `Version constraint is now ${c}.` })
-    setPkg('')
-    setConstraint('')
-    setError(null)
-    pkgRef.current?.focus()
-  }
-
-  const onEnter = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      add()
-    }
-  }
-
-  return (
-    <>
-      <div className="flex w-[612px] max-w-full flex-col gap-2">
-        <div className="flex items-start gap-2">
-          <Field invalid={!!error} className="flex-1 gap-1">
-            <FieldLabel className="text-foreground">Package name</FieldLabel>
-            <Input
-              ref={pkgRef}
-              value={pkg}
-              onChange={(e) => {
-                setPkg(e.target.value)
-                setError(null)
-              }}
-              onKeyDown={onEnter}
-              placeholder="Package name"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </Field>
-          <Field className="flex-1 gap-1">
-            <FieldLabel className="text-foreground">Version</FieldLabel>
-            <Input
-              value={constraint}
-              onChange={(e) => setConstraint(e.target.value)}
-              onKeyDown={onEnter}
-              placeholder="Version (e.g. >=1.0)"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </Field>
-          <Button type="button" variant="secondary" size="lg" className="mt-6 h-8" onClick={add}>
-            <Plus />
-            Add package
-          </Button>
-        </div>
-        {error ? (
-          <p className="text-destructive-foreground text-xs" role="alert">
-            {error}
-          </p>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            Add packages to install in this project. Leave the version blank to allow any version.
-          </p>
-        )}
-      </div>
-
-      <section className="flex w-[612px] max-w-full flex-col gap-1" aria-labelledby="packages-label">
-        <h2 id="packages-label" className="font-medium text-foreground text-sm">
-          Packages
-        </h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Version constraint</TableHead>
-              <TableHead className="w-20">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {requested.map((p) => (
-              <TableRow key={p.name}>
-                <TableCell className="h-10 py-2">{p.name}</TableCell>
-                <TableCell className="h-10 py-2">{p.constraint}</TableCell>
-                <TableCell className="h-10 py-1 text-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Remove ${p.name}`}
-                    onClick={() => onChange(requested.filter((r) => r.name !== p.name))}
-                  >
-                    <Trash2 />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {requested.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="h-16 text-center text-muted-foreground">
-                  No packages yet. You can still create an empty project.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </section>
-    </>
   )
 }

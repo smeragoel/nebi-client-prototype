@@ -21,7 +21,7 @@ export default function ProjectDetails() {
 
   if (!project) {
     return (
-      <main className="flex flex-col gap-3 px-12 py-9">
+      <main className="flex flex-col gap-3 p-9">
         <h1 className="font-bold text-3xl text-foreground">Project not found</h1>
         <Link to="/" className="text-sm underline underline-offset-4">
           Back to projects
@@ -46,7 +46,8 @@ export default function ProjectDetails() {
   }
 
   return (
-    <main className="flex flex-col gap-6 px-12 py-9">
+    // Fills the window under the 56px app header (h-14) so the rail and the panel scroll separately.
+    <main className="flex h-[calc(100dvh-3.5rem)] min-h-[560px] flex-col gap-6 px-9 pt-9">
       <header className="flex flex-col gap-1.5">
         <Breadcrumb>
           <BreadcrumbList>
@@ -77,14 +78,17 @@ export default function ProjectDetails() {
         </div>
       </header>
 
-      <div className="flex items-stretch gap-4">
+      <div className="flex min-h-0 flex-1 items-stretch gap-4">
         <VersionRail
           project={project}
           selected={selected.number}
           onSelect={(n) => setParams({ v: String(n) }, { replace: true })}
         />
         <div className="w-px shrink-0 bg-border" aria-hidden />
-        <VersionPanel key={selected.number} project={project} version={selected} serverOnly={selected.serverOnly} />
+        {/* Keyed so picking another version starts its details at the top. */}
+        <div key={selected.number} className="-mr-9 -ml-1 flex min-w-0 flex-1 overflow-y-auto pr-9 pb-9 pl-1">
+          <VersionPanel project={project} version={selected} serverOnly={selected.serverOnly} />
+        </div>
       </div>
     </main>
   )

@@ -1,5 +1,6 @@
-import { ChevronDown, CircleCheck, Code, Download, Info, Package, Plus, Search, Server, Upload } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, Code, Download, Package, Plus, Search, Server, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
 import { UninstallDialog } from '@/components/UninstallDialog'
 import { Badge } from '@/components/ui/badge'
@@ -15,50 +16,72 @@ import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTab } from '@/components/
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { fullDate, ME, type Project, pixiToml, resolve, type Version } from '@/data/sample'
 import { notBuilt, useStore } from '@/state/store'
+import { PublishDialog } from './PublishDialog'
 import { listVersions, newestLocal } from './sync'
 
 /** Right panel of project details (Figma 2898:9525 installed, 2903:8908 not installed). */
 export function VersionPanel({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
+  const navigate = useNavigate()
   const [confirmOlder, setConfirmOlder] = useState(false)
+  const [publishOpen, setPublishOpen] = useState(false)
   const newer = project.versions.filter((x) => x.number > v.number).map((x) => x.number)
+  const newVersionPage = `/projects/${project.id}/new-version?from=${v.number}`
 
-  const createNewVersion = () => (newer.length > 0 ? setConfirmOlder(true) : notBuilt('The Create new version page'))
+  const createNewVersion = () => (newer.length > 0 ? setConfirmOlder(true) : navigate(newVersionPage))
+  const installed = project.installedVersion === v.number
 
   return (
     <section className="flex min-w-0 flex-1 flex-col gap-4" aria-label={`Version ${v.number}`}>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-foreground text-xl leading-7">Version {v.number}</h2>
-            {v.tags.map((t) => (
-              <Badge key={t} variant="outline">
-                {t}
-              </Badge>
-            ))}
+      {/* 2026-09-28 sync with Nat (Figma 2898:9525 / 2903:8908): no install banner. Install or Uninstall
+          sits with the other actions, with size or "Replaces vN" under it; the meta line only states facts that are true. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-h-7 items-center gap-2">
+              <h2 className="font-semibold text-foreground text-xl leading-7">Version {v.number}</h2>
+              {v.tags.map((t) => (
+                <Badge key={t} variant="outline">
+                  {t}
+                </Badge>
+              ))}
+              {installed && (
+                <Badge className="border-transparent bg-success text-success-foreground">
+                  <Check />
+                  Installed
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-start gap-2">
+              <Tooltip>
+                <TooltipTrigger
+                  render={<Button variant="outline" size="sm" disabled={serverOnly} onClick={createNewVersion} />}
+                >
+                  <Plus />
+                  Create new version
+                </TooltipTrigger>
+                <TooltipContent>
+                  {serverOnly ? `Pull version ${v.number} first` : `Creates a new version based on version ${v.number}`}
+                </TooltipContent>
+              </Tooltip>
+              <Button variant="outline" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
+                <Upload />
+                Publish
+              </Button>
+              <InstallAction project={project} version={v} serverOnly={serverOnly} />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger render={<Button variant="outline" size="sm" onClick={createNewVersion} />}>
-                <Plus />
-                Create new version
-              </TooltipTrigger>
-              <TooltipContent>Creates a new version based on version {v.number}</TooltipContent>
-            </Tooltip>
-            <Button variant="outline" size="sm" onClick={() => notBuilt('Publish')}>
-              <Upload />
-              Publish
-            </Button>
-          </div>
+          <VersionMeta project={project} version={v} serverOnly={serverOnly} />
         </div>
 
-        <p className="text-foreground text-sm">{v.description}</p>
-        <VersionMeta project={project} version={v} serverOnly={serverOnly} />
-        <InstallStrip project={project} version={v} serverOnly={serverOnly} />
+        <p className="text-base text-foreground">{v.description}</p>
+        <InstallAlert project={project} version={v} />
       </div>
 
       <hr className="border-border" />
 
       <EnvironmentSpec project={project} version={v} />
+
+      <PublishDialog project={project} version={v} open={publishOpen} onOpenChange={setPublishOpen} />
 
       <Dialog open={confirmOlder} onOpenChange={setConfirmOlder}>
         <DialogContent className="max-w-[520px]">
@@ -73,14 +96,7 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
           </p>
           <DialogFooter>
             <DialogClose render={<Button variant="secondary" />}>Cancel</DialogClose>
-            <Button
-              onClick={() => {
-                setConfirmOlder(false)
-                notBuilt('The Create new version page')
-              }}
-            >
-              Start from version {v.number}
-            </Button>
+            <Button onClick={() => navigate(newVersionPage)}>Start from version {v.number}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -96,97 +112,125 @@ function Dot() {
   )
 }
 
+/** Only facts that hold are shown: no "Not on the server yet", no "Not published" (2026-09-28 sync). */
 function VersionMeta({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
   const onServer = serverOnly || (project.serverVersion != null && v.number <= project.serverVersion)
-  const server =
-    project.serverVersion == null
-      ? 'Not connected to a server'
-      : serverOnly
-        ? 'On the server · not on this machine yet'
-        : onServer
-          ? 'On the server'
-          : `Not on the server yet · server is at version ${project.serverVersion}`
-  const published = v.publications.map((p) => `${p.registry}/${p.repository}:${p.tag}`).join(', ')
+  const refs = v.publications.map((p) => `${p.registry}/${p.repository}:${p.tag}`)
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground-strong text-sm">
       <span className="flex items-center gap-1.5">
         <PersonAvatar person={v.author} />
         {v.author.name}
-        {v.author === ME && ' (you)'} · {fullDate(v.ageDays)}
+        {v.author === ME && ' (you)'} · {v.justNow ? 'just now' : fullDate(v.ageDays)}
       </span>
-      <Dot />
-      <span className="flex items-center gap-1.5">
-        <Server className="size-3.5" aria-hidden />
-        {server}
-      </span>
-      <Dot />
-      <span className="flex items-center gap-1.5">
-        <Upload className="size-3.5" aria-hidden />
-        {published ? `Published to ${published}` : 'Not published'}
-      </span>
+      {onServer && (
+        <>
+          <Dot />
+          <span className="flex items-center gap-1.5">
+            <Server className="size-3.5" aria-hidden />
+            {serverOnly ? 'On the server · not on this machine yet' : 'On the server'}
+          </span>
+        </>
+      )}
+      {refs.length > 0 && (
+        <>
+          <Dot />
+          {refs.length === 1 ? (
+            <span className="flex items-center gap-1.5">
+              <Upload className="size-3.5" aria-hidden />
+              Published to {refs[0]}
+            </span>
+          ) : (
+            // More than one registry: a count, with the full list on hover.
+            <Tooltip>
+              <TooltipTrigger render={<span className="flex items-center gap-1.5 underline decoration-dotted underline-offset-4" tabIndex={0} />}>
+                <Upload className="size-3.5" aria-hidden />
+                Published to {refs.length} registries
+              </TooltipTrigger>
+              <TooltipContent>{refs.join(', ')}</TooltipContent>
+            </Tooltip>
+          )}
+        </>
+      )}
     </div>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/* Install strip                                                       */
+/* Install / Uninstall                                                 */
 /* ------------------------------------------------------------------ */
 
-function InstallStrip({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
+/** The last header action, with a muted caption under it: size on disk, or what an install replaces. */
+function InstallAction({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
   const { installing, install, pull } = useStore()
   const [uninstallOpen, setUninstallOpen] = useState(false)
   const isInstalling = installing?.projectId === project.id && installing.version === v.number
-  const installed = project.installedVersion === v.number
+  const other = project.installedVersion
 
-  if (isInstalling) return <InstallingStrip version={v} step={installing.step} />
-
-  if (installed) {
+  if (serverOnly) {
     return (
-      <div className="flex items-center justify-between gap-4 rounded-md bg-success py-2.5 pr-2.5 pl-4">
-        <span className="flex items-center gap-2 font-medium text-sm text-success-foreground">
-          <CircleCheck className="size-4" aria-hidden />
-          Installed on this machine
-        </span>
-        <span className="flex items-center gap-3 text-muted-foreground-strong text-sm">
-          {project.size && `${project.size} on disk`}
-          <Button variant="outline" size="sm" onClick={() => setUninstallOpen(true)}>
-            <Package />
-            Uninstall
-          </Button>
-        </span>
+      <Button size="sm" onClick={() => pull(project.id)}>
+        <Download />
+        Pull version {v.number}
+      </Button>
+    )
+  }
+
+  if (other === v.number) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <Button variant="outline" size="sm" onClick={() => setUninstallOpen(true)}>
+          <Package />
+          Uninstall
+        </Button>
+        {project.size && <span className="text-muted-foreground-strong text-xs">{project.size} on disk</span>}
         <UninstallDialog project={project} open={uninstallOpen} onOpenChange={setUninstallOpen} />
       </div>
     )
   }
 
-  const other = project.installedVersion
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md bg-muted py-2.5 pr-2.5 pl-4">
-      <span className="flex items-center gap-2 font-medium text-foreground text-sm">
-        <Info className="size-4 text-muted-foreground-strong" aria-hidden />
-        {serverOnly
-          ? 'Not on this machine yet'
-          : other != null
-            ? `Not installed · version ${other} is installed on this machine`
-            : 'Not installed'}
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        size="sm"
+        loading={isInstalling}
+        loadingText="Installing…"
+        disabled={installing != null && !isInstalling}
+        onClick={() => install(project.id, v.number, { toast: false })}
+      >
+        <Download />
+        Install
+      </Button>
+      {other != null && (
+        <span className="whitespace-nowrap text-muted-foreground-strong text-xs">
+          Replaces{' '}
+          <Link to={`?v=${other}`} replace className="underline underline-offset-4 hover:text-primary">
+            v{other}
+          </Link>{' '}
+          on disk
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** Shows while this version installs, then stays ~5s once it's done and dismisses itself. */
+function InstallAlert({ project, version: v }: { project: Project; version: Version }) {
+  const { installing, installDone, dismissInstallDone } = useStore()
+  if (installing?.projectId === project.id && installing.version === v.number) {
+    return <InstallingStrip version={v} step={installing.step} />
+  }
+  if (installDone?.projectId !== project.id || installDone.version !== v.number) return null
+  return (
+    <div className="flex min-h-12 items-center justify-between gap-3 rounded-md bg-success py-2 pr-2 pl-4 text-success-foreground" role="status">
+      <span className="flex items-center gap-2 font-medium text-sm">
+        <CircleCheck className="size-4" aria-hidden />
+        Version {v.number} installed · ready to use on this machine
       </span>
-      <span className="flex items-center gap-3 text-muted-foreground-strong text-sm">
-        {serverOnly ? (
-          <Button size="sm" onClick={() => pull(project.id)}>
-            <Download />
-            Pull version {v.number}
-          </Button>
-        ) : (
-          <>
-            {other != null && `Replaces version ${other} on disk`}
-            <Button size="sm" disabled={installing != null} onClick={() => install(project.id, v.number)}>
-              <Download />
-              Install this version
-            </Button>
-          </>
-        )}
-      </span>
+      <Button variant="ghost" size="icon-sm" className="text-success-foreground" onClick={dismissInstallDone} aria-label="Dismiss">
+        <X />
+      </Button>
     </div>
   )
 }
@@ -205,7 +249,7 @@ function InstallingStrip({ version: v, step }: { version: Version; step: 1 | 2 }
   const line = packages[i]
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md bg-info py-2.5 pr-4 pl-4 text-info-foreground" role="status">
+    <div className="flex min-h-12 items-center justify-between gap-3 rounded-md bg-info py-2 pr-4 pl-4 text-info-foreground" role="status">
       <span className="flex items-center gap-2 font-medium text-sm">
         <Spinner size="sm" />
         Installing version {v.number} · {step === 1 ? 'downloading packages (step 1 of 2)' : 'linking packages (step 2 of 2)'}
@@ -229,6 +273,7 @@ function InstallingStrip({ version: v, step }: { version: Version; step: 1 | 2 }
 /* ------------------------------------------------------------------ */
 
 function EnvironmentSpec({ project, version: v }: { project: Project; version: Version }) {
+  const platformOption = (p: string) => (p === v.platforms[0] ? `${p} · this machine` : p)
   const [tab, setTab] = useState<'requested' | 'resolved'>('requested')
   const [query, setQuery] = useState('')
   const [platform, setPlatform] = useState(v.platforms[0])
@@ -273,8 +318,8 @@ function EnvironmentSpec({ project, version: v }: { project: Project; version: V
         <dd className="text-foreground">{v.platforms.join(', ')}</dd>
       </dl>
 
-      <div className="flex flex-col gap-1">
-        <h4 className="font-medium text-foreground text-sm">Packages</h4>
+      <div className="flex flex-col gap-2">
+        <h4 className="font-semibold text-base text-foreground leading-5">Packages</h4>
         <Tabs value={tab} onValueChange={(t) => setTab(t as typeof tab)}>
           <div className="flex items-end justify-between gap-2 border-border border-b pb-1.5">
             <TabsList variant="underline" className="border-0">
@@ -296,13 +341,23 @@ function EnvironmentSpec({ project, version: v }: { project: Project; version: V
               </div>
               {tab === 'resolved' && (
                 <Select value={platform} onValueChange={(p) => p && setPlatform(p)}>
-                  <SelectTrigger className="w-44" aria-label="Platform">
-                    <SelectValue>{(p: string) => (p === v.platforms[0] ? `${p} · this machine` : p)}</SelectValue>
+                  <SelectTrigger className="w-auto" aria-label="Platform">
+                    {/* Every label sits in one grid cell, so the trigger is as wide as the longest one. */}
+                    <span className="grid text-left">
+                      {v.platforms.map((p) => (
+                        <span key={p} className="invisible col-start-1 row-start-1 whitespace-nowrap" aria-hidden>
+                          {platformOption(p)}
+                        </span>
+                      ))}
+                      <SelectValue className="col-start-1 row-start-1 whitespace-nowrap">
+                        {(p: string) => platformOption(p)}
+                      </SelectValue>
+                    </span>
                   </SelectTrigger>
-                  <SelectContent>
-                    {v.platforms.map((p, i) => (
+                  <SelectContent className="w-auto min-w-(--anchor-width)">
+                    {v.platforms.map((p) => (
                       <SelectItem key={p} value={p}>
-                        {i === 0 ? `${p} · this machine` : p}
+                        {platformOption(p)}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -6,21 +6,27 @@ const FIGMA_FILE = `https://www.figma.com/design/${figmaMap.fileKey}/Nebi-UI`
 
 // Index of screens this prototype will cover. Add a `path` once a screen is built.
 const screens: { name: keyof typeof figmaMap.screens; label: string; path?: string }[] = [
-  { name: 'ProjectsList', label: 'Projects list', path: '/' },
+  { name: 'ProjectsList', label: 'Projects list', path: '/?scenario=default' },
+  { name: 'RemotesWrap', label: 'Projects list: several remotes wrap in the cell', path: '/?scenario=default' },
+  { name: 'EmptyNotConnected', label: 'Projects list: empty, not connected to a server', path: '/?scenario=empty-not-connected' },
+  { name: 'EmptyConnected', label: 'Projects list: empty, connected to a server', path: '/?scenario=empty-connected' },
   { name: 'NewProjectMenu', label: 'New project split button', path: '/' },
   { name: 'CreateProject', label: 'Create project: form', path: '/projects/new' },
   { name: 'CreateProjectToml', label: 'Create project: pixi.toml editor', path: '/projects/new?mode=toml' },
   { name: 'DiscardNewProject', label: 'Discard new project (Cancel with entries)', path: '/projects/new' },
   { name: 'ProjectDetailsInstalled', label: 'Project details: installed version selected', path: '/projects/project-1?v=7' },
   { name: 'ProjectDetailsOtherVersion', label: 'Project details: other version selected', path: '/projects/project-1?v=5' },
-  { name: 'VersionRowRedesign', label: 'Version row layout pass (used in the rail)', path: '/projects/project-1' },
-  { name: 'Installing', label: 'Installing (Install this version)', path: '/projects/project-1?v=5' },
+  { name: 'VersionRow', label: 'Version row (live component, used in the rail)', path: '/projects/project-1' },
+  { name: 'Installing', label: 'Installing (Install on version 5)', path: '/projects/project-1?v=5' },
   { name: 'InSync', label: 'In sync (Push)', path: '/projects/project-1' },
-  { name: 'CreateNewVersion', label: 'Create new version' },
+  { name: 'CreateNewVersion', label: 'Create new version (from version 7)', path: '/projects/project-1/new-version?from=7' },
   { name: 'OlderBaseConfirm', label: 'Older-base confirmation (Create new version on v5)', path: '/projects/project-1?v=5' },
-  { name: 'PublishModal', label: 'Publish' },
+  { name: 'JustCreated', label: 'Version just created (save the Create new version page)', path: '/projects/project-1/new-version?from=5' },
+  { name: 'PublishModal', label: 'Publish (simplified, 2026-09-28)', path: '/projects/project-1?v=5' },
   { name: 'ServerAhead', label: 'Server ahead', path: '/projects/project-pulled-from-server' },
   { name: 'UninstallConfirm', label: 'Uninstall confirmation', path: '/projects/project-1?v=7' },
+  { name: 'VersionRowRedesign', label: 'Version row layout pass (2026-09-25 proposal, not used)' },
+  { name: 'PublishAfterSave', label: 'Publish: after save, per-registry results' },
 ]
 
 export default function Start() {
@@ -28,7 +34,7 @@ export default function Start() {
     <main className="mx-auto w-full max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-semibold text-foreground">Nebi client prototype</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Every screen in scope, what's built, and its Figma frame. Designs as of 2026-09-25. Reloading a page resets the sample data.
+        Every screen in scope, what's built, and its Figma frame. Designs as of 2026-09-28. Reloading a page resets the sample data.
       </p>
       <ul className="mt-8 divide-y divide-border rounded-md border border-border">
         {screens.map((s) => (

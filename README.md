@@ -13,7 +13,15 @@ npm run dev
 
 Opens on http://localhost:5173 at the Projects list. `/screens` lists every screen in scope, whether it's built, and a link to its Figma frame.
 
-Built so far: Projects list (`1774:2940`) with the New project split button (`2310:19662`); Create project (`1811:19075`): the form (`2309:16943`) and the pixi.toml editor (`2675:8526`) on one page at `/projects/new` (`?mode=toml`), entries carried across when switching, a discard dialog on Cancel (`2671:8341`), and Create / Create and install landing on the new project (the form is replaced in history); and project details (`2898:9525`, `2903:8908`) with the 2026-09-25 version-row layout pass (`2940:11386`), plus install / uninstall, push, pull, the older-version confirmation and the pixi.toml viewer. Buttons for screens that aren't built yet show an "isn't in the prototype yet" toast. State is in memory, so a reload resets the sample data (`src/data/sample.ts`).
+Built so far (every frame in Figma section `01 Projects` `1811:17438`, as of 2026-09-28):
+- **Projects list** (`1774:2940`); clicking anywhere on a row opens the project. With the New project split button (`2310:19662`) and both **empty states**: not connected (`1774:15524`) and connected (`2314:9604`). Open them with `/?scenario=empty-not-connected` or `/?scenario=empty-connected`; `/?scenario=default` restores the sample data.
+- **Create project** (`1811:19075`): the form (`2309:16943`) and the pixi.toml editor (`2675:8526`) on one page at `/projects/new` (`?mode=toml`), entries carried across when switching, a discard dialog on Cancel (`2671:8341`), and Create / Create and install landing on the new project (the form is replaced in history).
+- **Project details** (`2898:9525`, `2903:8908`) after the 2026-09-28 consistency pass: 36px page padding, title + meta → description → status card, and rail rows that follow the live `Version row` component (`2931:11315`). The version list and the version details scroll separately; the rail's heading, notices and search stay put. Includes install (`2925:10612`), uninstall (`2923:24190`), push and in sync (`2925:25499`: "Pushing…", then the server marker slides into the laptop's row, the pair turns green, and the notice collapses), pull when the server is ahead (`2917:24512`) and the pixi.toml viewer.
+- Both create pages keep the Cancel / Create bar stuck to the bottom of the window.
+- **Create new version** (`2914:9164`) at `/projects/:id/new-version?from=N`, with the older-version confirmation (`2916:9418`). Tags move off older versions, invalid tags show the "must start with a letter" error, and "Suggested from your changes" fills the description from the package diff. Saving lands on the new version with the fading highlight and the "Version N created" toast with Push to server (`2925:11253`).
+- **Publish** (`2969:13055`, the simplified copy): one switch per registry, Edit for repository:tag before the first publish, and a warning only on a published row being switched off.
+
+Not built: the Publish after-save results state (`2922:10106`, still on the old copy), and anything not designed yet (Share, Compare versions, Filters, Delete project, Connect to server, pull flows, the job log). Those buttons show an "isn't in the prototype yet" toast. State is in memory, so a reload resets the sample data (`src/data/sample.ts`).
 
 Deployed on Vercel from the `main` branch of `smeragoel/nebi-client-prototype`; every push redeploys.
 
@@ -41,7 +49,8 @@ src/
   components/ui/   NDS components (registry-managed)
   components/      prototype-specific pieces
   screens/         one file per screen; add a route in App.tsx and a `path` in screens/Start.tsx
-  components/details/  rail + panel for project details
+  components/details/  rail, panel and Publish dialog for project details
+  components/form/     fields shared by Create project and Create new version
   state/store.tsx  shared in-memory state (install, uninstall, push, pull)
   data/sample.ts   sample projects, versions and packages
   figma-map.json   screen → Figma node IDs (file Wu8VTFA5IO5BjbvifZJMyZ)

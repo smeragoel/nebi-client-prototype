@@ -1,7 +1,7 @@
 import { Menu } from '@base-ui/react/menu'
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, Ellipsis, History, LayoutPanelTop, Pencil, Plus, Search, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { UninstallDialog } from '@/components/UninstallDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Project } from '@/data/sample'
 import { newestLocal } from '@/components/details/sync'
-import { notBuilt, useStore } from '@/state/store'
+import { notBuilt, type Scenario, useStore } from '@/state/store'
 
 type SortKey = 'name' | 'version' | 'environment' | 'size' | 'remotes'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
@@ -36,7 +36,8 @@ const sortValue: Record<SortKey, (p: Project) => string | number> = {
 
 /** Figma `01a - Main Projects` 1774:2940. */
 export default function ProjectsList() {
-  const { projects } = useStore()
+  const { projects, loadScenario } = useStore()
+  const [params, setParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>({ key: 'name', dir: 'asc' })
   const [uninstalling, setUninstalling] = useState<Project | null>(null)
@@ -51,6 +52,14 @@ export default function ProjectsList() {
       return sort.dir === 'asc' ? cmp : -cmp
     })
   }, [projects, query, sort])
+
+  // `/?scenario=empty-connected` etc. load a sample-data setup (linked from /screens).
+  const scenario = params.get('scenario') as Scenario | null
+  useEffect(() => {
+    if (!scenario) return
+    loadScenario(scenario)
+    setParams({}, { replace: true })
+  }, [scenario, loadScenario, setParams])
 
   const toggleSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
@@ -70,13 +79,26 @@ export default function ProjectsList() {
     )
   }
 
+  const title = (
+    <div className="flex flex-col gap-2">
+      <h1 className="font-bold text-3xl text-foreground">Projects</h1>
+      <p className="text-base text-muted-foreground">Local projects on this machine</p>
+    </div>
+  )
+
+  if (projects.length === 0) {
+    return (
+      <main className="flex flex-col gap-5 px-12 py-12">
+        {title}
+        <EmptyState />
+      </main>
+    )
+  }
+
   return (
     <main className="flex flex-col gap-5 px-12 py-12">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-bold text-3xl text-foreground">Projects</h1>
-          <p className="text-base text-muted-foreground">Local projects on this machine</p>
-        </div>
+        {title}
         <NewProjectButton />
       </div>
 
@@ -128,6 +150,52 @@ export default function ProjectsList() {
   )
 }
 
+/**
+ * Figma `01b Main Projects empty` 2043:27084: not connected to a server (1774:15524) offers
+ * Connect to server; connected (2314:9604) offers pulling instead.
+ */
+function EmptyState() {
+  const { serverConnected } = useStore()
+  const navigate = useNavigate()
+  return (
+    <section className="mt-20 flex flex-col items-center gap-3 text-center" aria-labelledby="empty-title">
+      <h2 id="empty-title" className="font-semibold text-foreground text-xl leading-7">
+        No projects yet
+      </h2>
+      <p className="max-w-xl text-muted-foreground-strong text-sm">
+        {serverConnected
+          ? 'Create one locally, or pull an existing project from your server or a registry.'
+          : 'Create a project locally, or bring one in from your team’s server or a registry.'}
+      </p>
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
+        <Button onClick={() => navigate('/projects/new')}>
+          <Plus />
+          New project
+        </Button>
+        {serverConnected ? (
+          <>
+            <Button variant="secondary" onClick={() => notBuilt('Pull from server')}>
+              Pull from server
+            </Button>
+            <Button variant="secondary" onClick={() => notBuilt('Pull from registry')}>
+              Pull from registry
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={() => notBuilt('Connect to server')}>
+              Connect to server
+            </Button>
+            <Button variant="secondary" onClick={() => notBuilt('Add a registry')}>
+              Add a registry
+            </Button>
+          </>
+        )}
+      </div>
+    </section>
+  )
+}
+
 /** Figma `01c - new Project dropdown` 2310:19662: split button, the main half opens the form. */
 function NewProjectButton() {
   const navigate = useNavigate()
@@ -166,8 +234,18 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
   const installed = p.installedVersion != null
   const installTarget = p.lastInstalledVersion ?? newestLocal(p)
 
+  // The whole row opens the project. Controls inside it (Install, remotes, the menu) keep their own
+  // action; the name link stays the keyboard path, so the row itself isn't a tab stop.
+  const openRow = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (target.closest('a, button, [role="menuitem"], [role="menu"], [data-slot="badge"]')) return
+    if (!e.currentTarget.contains(target)) return // clicks inside portalled menus/dialogs
+    if (window.getSelection()?.toString()) return // let people copy text from a row
+    navigate(`/projects/${p.id}`)
+  }
+
   return (
-    <TableRow>
+    <TableRow className="cursor-pointer" onClick={openRow}>
       <TableCell className="h-10 py-2">
         <Link to={`/projects/${p.id}`} className="underline-offset-4 hover:underline focus-visible:underline">
           {p.name}
@@ -246,7 +324,7 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
           </DropdownMenuTrigger>
           <DropdownMenuPortal>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => notBuilt('Create new version')}>
+              <DropdownMenuItem onClick={() => navigate(`/projects/${p.id}/new-version?from=${newestLocal(p)}`)}>
                 <Pencil />
                 Create new version
               </DropdownMenuItem>

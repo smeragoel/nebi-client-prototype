@@ -34,6 +34,8 @@ export type Version = {
   platforms: string[]
   requested: RequestedPackage[]
   publications: Publication[]
+  /** Made in this session: the meta line says "just now" instead of a date. */
+  justNow?: boolean
 }
 
 export type Project = {
@@ -147,6 +149,45 @@ export const INITIAL_PROJECTS: Project[] = [
 ]
 
 /* ------------------------------------------------------------------ */
+/* Registries (client-side OCI registries, 2026-09-15: off the server)  */
+/* ------------------------------------------------------------------ */
+
+export type Registry = { name: string; url: string; namespace: string }
+
+/** Registries this machine can publish to. Values from the Publish modal 2969:13055. */
+export const REGISTRIES: Registry[] = [
+  { name: 'GitHub Container Registry', url: 'ghcr.io', namespace: 'example-org' },
+  { name: 'Quay', url: 'quay.io', namespace: 'nebari' },
+  { name: 'Internal Harbor', url: 'harbor.example.com', namespace: 'ml' },
+]
+
+/** Default publication for a version: repository = project name, tag = version number (GET /publish-defaults). */
+export function defaultPublication(r: Registry, project: Project, v: Version): Publication {
+  return { registry: r.url, repository: `${r.namespace}/${project.name.toLowerCase()}`, tag: String(v.number) }
+}
+
+export const publicationRef = (p: Publication) => `${p.registry}/${p.repository}:${p.tag}`
+
+/* ------------------------------------------------------------------ */
+/* Change summary (computed from the manifest diff, ◐ in ux.md)         */
+/* ------------------------------------------------------------------ */
+
+/** ["added seaborn", "removed requests", "changed numpy"]: what differs between two package lists. */
+export function changeSummary(before: RequestedPackage[], after: RequestedPackage[]) {
+  const was = new Map(before.map((p) => [p.name, p.constraint]))
+  const now = new Map(after.map((p) => [p.name, p.constraint]))
+  const added = after.filter((p) => !was.has(p.name)).map((p) => p.name)
+  const removed = before.filter((p) => !now.has(p.name)).map((p) => p.name)
+  const changed = after.filter((p) => was.has(p.name) && was.get(p.name) !== p.constraint).map((p) => p.name)
+  const list = (xs: string[]) => (xs.length <= 2 ? xs.join(' and ') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`)
+  return [
+    added.length ? `added ${list(added)}` : null,
+    removed.length ? `removed ${list(removed)}` : null,
+    changed.length ? `changed ${list(changed)}` : null,
+  ].filter((x): x is string => x != null)
+}
+
+/* ------------------------------------------------------------------ */
 /* Resolved packages (pixi.lock). Computed from the requested list.    */
 /* ------------------------------------------------------------------ */
 
@@ -158,6 +199,7 @@ const LOCK: Record<string, LockEntry> = {
   numpy: { version: '2.1.3', channel: 'conda-forge', size: '7.9 MB', deps: ['libopenblas'] },
   pandas: { version: '2.2.3', channel: 'conda-forge', size: '14.6 MB', deps: ['python-dateutil', 'pytz'] },
   rich: { version: '13.9.4', channel: 'conda-forge', size: '185 KB', deps: ['markdown-it-py', 'pygments'] },
+  seaborn: { version: '0.13.2', channel: 'conda-forge', size: '234 KB', deps: ['matplotlib', 'pandas'] },
   scipy: { version: '1.14.1', channel: 'conda-forge', size: '17.2 MB' },
   matplotlib: { version: '3.9.2', channel: 'conda-forge', size: '7.6 MB', deps: ['pillow', 'fonttools'] },
   'scikit-learn': { version: '1.5.2', channel: 'conda-forge', size: '9.4 MB', deps: ['joblib', 'threadpoolctl'] },
