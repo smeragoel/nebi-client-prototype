@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleCheck, Code, Download, Package, Plus, Search, Server, Upload, X } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageX, Plus, Search, Server, SquareArrowUp, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
@@ -63,6 +63,7 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
                   {serverOnly ? `Pull version ${v.number} first` : `Creates a new version based on version ${v.number}`}
                 </TooltipContent>
               </Tooltip>
+              <PushAction project={project} version={v} serverOnly={serverOnly} />
               <Button variant="outline" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
                 <Upload />
                 Publish
@@ -83,19 +84,24 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
 
       <PublishDialog project={project} version={v} open={publishOpen} onOpenChange={setPublishOpen} />
 
+      {/* Figma 2916:10035: the latest version is offered as the other way forward, beside the older base. */}
       <Dialog open={confirmOlder} onOpenChange={setConfirmOlder}>
         <DialogContent className="max-w-[520px]">
           <DialogHeader>
             <DialogTitle>Start a new version from version {v.number}?</DialogTitle>
             <DialogDescription>
-              Version {v.number} is older than the latest version, {newestLocal(project)}.
+              Version {v.number} is older than the latest version, v{newestLocal(project)}.
             </DialogDescription>
           </DialogHeader>
           <p className="text-foreground text-sm">
-            Changes made in {listVersions(newer)} won’t carry over, but those versions stay in the history.
+            The new version starts with version {v.number}’s packages and settings. Changes made in {listVersions(newer)} won’t
+            carry over, but those versions stay in the history.
           </p>
           <DialogFooter>
-            <DialogClose render={<Button variant="secondary" />}>Cancel</DialogClose>
+            <DialogClose render={<Button variant="ghost" className="sm:mr-auto" />}>Cancel</DialogClose>
+            <Button variant="secondary" onClick={() => navigate(`/projects/${project.id}/new-version?from=${newestLocal(project)}`)}>
+              Start from v{newestLocal(project)}
+            </Button>
             <Button onClick={() => navigate(newVersionPage)}>Start from version {v.number}</Button>
           </DialogFooter>
         </DialogContent>
@@ -157,6 +163,39 @@ function VersionMeta({ project, version: v, serverOnly }: { project: Project; ve
   )
 }
 
+/**
+ * Figma 2898:9675: only on a version this machine has that the server doesn't yet. It pushes up to
+ * this version; newer unpushed ones stay here (the rail's Push sends everything). When older
+ * versions have to go too, the tooltip names them.
+ */
+function PushAction({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
+  const { push, pushing } = useStore()
+  if (serverOnly || project.serverVersion == null || v.number <= project.serverVersion) return null
+  const server = project.serverVersion
+  const sends = project.versions.map((x) => x.number).filter((n) => n > server && n <= v.number).sort((a, b) => a - b)
+  const props = {
+    variant: 'outline',
+    size: 'sm',
+    loading: pushing?.projectId === project.id && pushing.upTo === v.number,
+    loadingText: 'Pushing…',
+    disabled: pushing != null && pushing.upTo !== v.number,
+    onClick: () => push(project.id, v.number),
+  } as const
+  const label = (
+    <>
+      <SquareArrowUp />
+      Push to server
+    </>
+  )
+  if (sends.length === 1) return <Button {...props}>{label}</Button>
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<Button {...props} />}>{label}</TooltipTrigger>
+      <TooltipContent>Pushes {listVersions(sends)}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 /* ------------------------------------------------------------------ */
 /* Install / Uninstall                                                 */
 /* ------------------------------------------------------------------ */
@@ -181,7 +220,7 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
     return (
       <div className="flex flex-col items-end gap-1">
         <Button variant="outline" size="sm" onClick={() => setUninstallOpen(true)}>
-          <Package />
+          <PackageX />
           Uninstall
         </Button>
         {project.size && <span className="text-muted-foreground-strong text-xs">{project.size} on disk</span>}
@@ -199,7 +238,7 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
         disabled={installing != null && !isInstalling}
         onClick={() => install(project.id, v.number, { toast: false })}
       >
-        <Download />
+        <Import />
         Install
       </Button>
       {other != null && (
@@ -290,16 +329,16 @@ function EnvironmentSpec({ project, version: v }: { project: Project; version: V
         <DropdownMenu>
           <DropdownMenuTrigger variant="outline" className="h-6 gap-1 px-2 text-xs [&_svg]:size-3">
             Files
-            <ChevronDown />
+            <ChevronDown className="size-3" />
           </DropdownMenuTrigger>
           <DropdownMenuPortal>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setTomlOpen(true)}>
-                <Code />
+                <CodeXml />
                 View pixi.toml
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => notBuilt('View pixi.lock')}>
-                <Code />
+                <CodeXml />
                 View pixi.lock
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => notBuilt('Download archive')}>
@@ -329,7 +368,7 @@ function EnvironmentSpec({ project, version: v }: { project: Project; version: V
             </TabsList>
             <div className="flex items-center gap-2">
               <div className="relative w-60">
-                <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-[18px] -translate-y-1/2 text-muted-foreground" aria-hidden />
                 <Input
                   type="search"
                   value={query}
@@ -392,7 +431,7 @@ function EnvironmentSpec({ project, version: v }: { project: Project; version: V
                   <TableHead>Name</TableHead>
                   <TableHead>Version</TableHead>
                   <TableHead>Channel</TableHead>
-                  <TableHead>Size</TableHead>
+                  <TableHead>Download size</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

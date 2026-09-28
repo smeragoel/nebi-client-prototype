@@ -123,7 +123,7 @@ function BreadcrumbSeparator({
       data-slot="breadcrumb-separator"
       role="presentation"
       className={cn(
-        'flex items-center text-muted-foreground [&>svg]:size-3.5 [&>svg]:shrink-0',
+        'flex items-center text-muted-foreground [&>svg]:size-4 [&>svg]:shrink-0',
         className,
       )}
       {...props}

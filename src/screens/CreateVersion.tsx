@@ -1,34 +1,36 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChipsField, FormField, PackagesEditor, PlatformsField } from '@/components/form/fields'
+import { ChipsField, FormField, FormSection, PackagesEditor, PAGE_COLUMN, PlatformsField, tagError } from '@/components/form/fields'
+import { EditorModeSwitch, TomlEditor } from '@/components/TomlEditor'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { toast } from '@/components/ui/toast'
 import { changeSummary } from '@/data/sample'
 import { thisMachinePlatform } from '@/lib/platforms'
+import { draftToToml, parseToml } from '@/lib/toml'
+import { cn } from '@/lib/utils'
 import { useStore } from '@/state/store'
 
+type Mode = 'gui' | 'toml'
+
 const CHANNEL_SUGGESTIONS = ['conda-forge', 'bioconda', 'pytorch', 'nvidia', 'defaults']
-const TAG_PATTERN = /^[A-Za-z][A-Za-z0-9._-]*$/
 const DESCRIPTION_SHOWN = 72
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-function tagError(tag: string) {
-  if (TAG_PATTERN.test(tag)) return null
-  if (!/^[A-Za-z]/.test(tag)) return `“${tag}” can’t be used: tags must start with a letter.`
-  return `“${tag}” can’t be used: tags use letters, numbers, dots, hyphens and underscores.`
-}
-
 /**
- * Figma `Create new version (from version 5)` 2914:9164, a sibling of Create project.
- * `/projects/:id/new-version?from=5`. Environment first, then "About this version" (tags, description).
- * Saving lands on the new version in project details, replacing this page in history.
+ * Figma `Create new version (from version 5)` 3006:11933, laid out as section rows like
+ * Create project. `/projects/:id/new-version?from=5`; `&mode=toml` is the pixi.toml editor
+ * (3011:11986), which starts from the base version's pixi.toml. "About this version" (tags,
+ * description) is the same in both modes. Saving lands on the new version in project details,
+ * replacing this page in history.
  */
 export default function CreateVersion() {
   const { id } = useParams()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
+  const mode: Mode = params.get('mode') === 'toml' ? 'toml' : 'gui'
   const { projects, createVersion } = useStore()
   const navigate = useNavigate()
   const machine = useMemo(() => thisMachinePlatform(), [])
@@ -40,6 +42,9 @@ export default function CreateVersion() {
   const [platforms, setPlatforms] = useState(base?.platforms ?? [])
   const [channels, setChannels] = useState(base?.channels ?? [])
   const [requested, setRequested] = useState(base?.requested ?? [])
+  const baseToml = () =>
+    draftToToml({ name: project?.name ?? '', channels: base?.channels ?? [], platforms: base?.platforms ?? [], requested: base?.requested ?? [] })
+  const [toml, setToml] = useState(baseToml)
   const [tags, setTags] = useState(['latest'])
   const [description, setDescription] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -47,15 +52,23 @@ export default function CreateVersion() {
   const [created, setCreated] = useState(false)
   const descriptionRef = useRef<HTMLInputElement>(null)
 
-  const summary = base ? changeSummary(base.requested, requested) : []
+  const parsed = useMemo(() => parseToml(toml), [toml])
+  // In pixi.toml mode the environment is whatever the editor holds.
+  const env =
+    mode === 'gui'
+      ? { platforms, channels, requested }
+      : { platforms: parsed.draft.platforms, channels: parsed.draft.channels, requested: parsed.draft.requested }
+
+  const summary = base ? changeSummary(base.requested, env.requested) : []
   const suggestion = summary.length ? capitalise(summary.join(', ')) : null
 
   const dirty =
     !created &&
     !!base &&
-    (!same(platforms, base.platforms) ||
-      !same(channels, base.channels) ||
-      !same(requested, base.requested) ||
+    (!same(env.platforms, base.platforms) ||
+      !same(env.channels, base.channels) ||
+      !same(env.requested, base.requested) ||
+      (mode === 'toml' && toml.trim() !== baseToml().trim()) ||
       !same(tags, ['latest']) ||
       !!description.trim())
 
@@ -81,19 +94,68 @@ export default function CreateVersion() {
   const leave = (to: string) => (dirty ? setLeavingTo(to) : navigate(to))
 
   const descriptionError = submitted && !description.trim() ? 'Enter a description.' : null
-  const platformsError = submitted && platforms.length === 0 ? 'Add at least one platform.' : null
+  const platformsError = mode === 'gui' && submitted && platforms.length === 0 ? 'Add at least one platform.' : null
+  const tomlError =
+    mode !== 'toml' || !submitted
+      ? null
+      : !parsed.hasWorkspace
+        ? 'pixi.toml needs a [workspace] table.'
+        : parsed.draft.platforms.length === 0
+          ? 'List at least one platform in platforms = [ ].'
+          : null
   const tagsInvalid = tags.some((t) => tagError(t))
+
+  /* ---------------- mode switch ---------------- */
+
+  const setMode = (next: Mode) => {
+    const nextParams = new URLSearchParams(params)
+    if (next === 'toml') nextParams.set('mode', 'toml')
+    else nextParams.delete('mode')
+    setParams(nextParams, { replace: true })
+  }
+
+  const switchMode = () => {
+    if (mode === 'gui') {
+      setToml(draftToToml({ name: project.name, channels, platforms, requested }))
+      setMode('toml')
+    } else {
+      const { draft, dropped } = parsed
+      if (draft.channels.length) setChannels(draft.channels)
+      setPlatforms(draft.platforms)
+      setRequested(draft.requested)
+      setMode('gui')
+      if (dropped.length) {
+        toast.add({
+          title: `The form can’t show ${dropped.join(', ')}`,
+          description: 'Those tables were left out. Switch back to the pixi.toml editor to add them again.',
+          type: 'info',
+        })
+      }
+    }
+    setSubmitted(false)
+  }
+
+  /* ---------------- submit ---------------- */
 
   const submit = (andInstall: boolean) => {
     setSubmitted(true)
-    if (!description.trim() || platforms.length === 0 || tagsInvalid) {
+    const tomlInvalid = mode === 'toml' && (!parsed.hasWorkspace || parsed.draft.platforms.length === 0)
+    const guiInvalid = mode === 'gui' && platforms.length === 0
+    if (!description.trim() || tomlInvalid || guiInvalid || tagsInvalid) {
       if (!description.trim()) descriptionRef.current?.focus()
       return
     }
     setCreated(true)
     const n = createVersion(
       project.id,
-      { base: base.number, platforms, channels, requested, tags, description: description.trim() },
+      {
+        base: base.number,
+        platforms: env.platforms,
+        channels: env.channels.length ? env.channels : base.channels,
+        requested: env.requested,
+        tags,
+        description: description.trim(),
+      },
       andInstall,
     )
     navigate(`/projects/${project.id}?v=${n}`, { replace: true })
@@ -103,8 +165,8 @@ export default function CreateVersion() {
 
   return (
     <main className="flex flex-1 flex-col px-9 pt-9">
-      <form className="flex flex-1 flex-col gap-5" onSubmit={onSubmit} noValidate>
-        <div className="flex flex-col gap-1.5">
+      <form className="flex flex-1 flex-col" onSubmit={onSubmit} noValidate>
+        <div className={cn(PAGE_COLUMN, 'flex flex-col gap-1.5 pb-6')}>
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
@@ -136,86 +198,116 @@ export default function CreateVersion() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h1 className="font-bold text-3xl text-foreground">New version of {project.name}</h1>
-          <p className="text-muted-foreground-strong text-sm">
-            Starts from version {base.number}’s environment. Version {base.number} stays as it is.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-col gap-1.5">
+              <h1 className="font-bold text-3xl text-foreground">New version of {project.name}</h1>
+              <p className="text-muted-foreground-strong text-sm">
+                Starts from version {base.number}’s environment. Version {base.number} stays as it is.
+              </p>
+            </div>
+            <EditorModeSwitch mode={mode} onSwitch={switchMode} />
+          </div>
         </div>
 
-        <section className="flex flex-col gap-5" aria-labelledby="environment-heading">
-          <h2 id="environment-heading" className="font-semibold text-base text-foreground">
-            Environment
-          </h2>
-          <PlatformsField
-            machine={machine}
-            value={platforms}
-            onChange={setPlatforms}
-            error={platformsError}
-            description={`Starts with version ${base.number}’s platforms. For uncommon platforms, type pixi’s name (e.g. linux-ppc64le).`}
-          />
-          <ChipsField
-            label="Channels"
-            value={channels}
-            onChange={setChannels}
-            suggestions={CHANNEL_SUGGESTIONS}
-            placeholder="Add a channel"
-            description="conda-forge works for most projects."
-            normalize={(s) => s.trim().toLowerCase()}
-          />
-          <PackagesEditor
-            requested={requested}
-            onChange={setRequested}
-            description={`Add or remove packages. The table starts with version ${base.number}’s packages. Leave the version blank to allow any version.`}
-            emptyText="No packages. The new version would be an empty environment."
-          />
-        </section>
-
-        <section className="flex flex-col gap-5" aria-labelledby="about-heading">
-          <h2 id="about-heading" className="font-semibold text-base text-foreground">
-            About this version
-          </h2>
-          <ChipsField
-            label="Tags (optional)"
-            value={tags}
-            onChange={setTags}
-            suggestions={[...new Set(project.versions.flatMap((v) => v.tags))]}
-            placeholder="Add a tag"
-            description="A tag stays with this version until a newer version uses the same tag. latest does this automatically."
-            invalid={tagError}
-          />
-          <FormField
-            label="Description"
-            error={descriptionError}
-            description={`Required. The first ${DESCRIPTION_SHOWN} characters show in the version list.`}
-          >
-            <Input
-              ref={descriptionRef}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g., Swapped tensorflow for scikit-learn"
-              autoComplete="off"
-            />
-          </FormField>
-          {suggestion && description !== suggestion && (
-            <p className="-mt-3 flex items-center gap-2 text-muted-foreground-strong text-sm">
-              Suggested from your changes:
-              <Button type="button" variant="link" size="xs" className="h-auto px-0" onClick={() => setDescription(suggestion)}>
-                {suggestion}
-              </Button>
-            </p>
+        <div className={PAGE_COLUMN}>
+          {mode === 'gui' ? (
+            <>
+              <FormSection id="environment" title="Environment" intro="The platforms and channels pixi solves this version for.">
+                <PlatformsField
+                  machine={machine}
+                  value={platforms}
+                  onChange={setPlatforms}
+                  error={platformsError}
+                  description={`Starts with version ${base.number}’s platforms. For uncommon platforms, type pixi’s name (e.g. linux-ppc64le).`}
+                />
+                <ChipsField
+                  label="Channels"
+                  value={channels}
+                  onChange={setChannels}
+                  suggestions={CHANNEL_SUGGESTIONS}
+                  placeholder="Add a channel"
+                  description="conda-forge works for most projects."
+                  normalize={(s) => s.trim().toLowerCase()}
+                />
+              </FormSection>
+              <FormSection
+                id="packages"
+                title="Packages"
+                intro={`Starts with version ${base.number}’s packages. Leave the version blank to allow any version.`}
+              >
+                <PackagesEditor
+                  requested={requested}
+                  onChange={setRequested}
+                  labelledBy="packages-heading"
+                  emptyText="No packages. The new version would be an empty environment."
+                />
+              </FormSection>
+            </>
+          ) : (
+            <FormSection
+              id="toml"
+              title="pixi.toml"
+              intro={`Starts with version ${base.number}’s pixi.toml. Tags and the description aren’t part of pixi.toml, so they’re set below.`}
+            >
+              <div className="flex flex-col gap-1">
+                <TomlEditor value={toml} onChange={setToml} invalid={!!tomlError} describedBy={tomlError ? 'toml-error' : undefined} />
+                {tomlError && (
+                  <p id="toml-error" className="text-destructive-foreground text-xs">
+                    {tomlError}
+                  </p>
+                )}
+              </div>
+            </FormSection>
           )}
-        </section>
+
+          <FormSection id="about" title="About this version" intro="Shown in the version list and on the version’s page.">
+            <ChipsField
+              label="Tags (optional)"
+              value={tags}
+              onChange={setTags}
+              suggestions={[...new Set(project.versions.flatMap((v) => v.tags))]}
+              placeholder="Add a tag"
+              description="A tag stays with this version until a newer version uses the same tag. latest does this automatically."
+              invalid={tagError}
+            />
+            <div className="flex flex-col gap-3">
+              <FormField
+                label="Description"
+                error={descriptionError}
+                description={`Required. The first ${DESCRIPTION_SHOWN} characters show in the version list.`}
+              >
+                <Input
+                  ref={descriptionRef}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g., Swapped tensorflow for scikit-learn"
+                  autoComplete="off"
+                />
+              </FormField>
+              {suggestion && description !== suggestion && (
+                <p className="flex items-center gap-2 text-muted-foreground-strong text-sm">
+                  Suggested from your changes:
+                  <Button type="button" variant="link" size="xs" className="h-auto px-0" onClick={() => setDescription(suggestion)}>
+                    {suggestion}
+                  </Button>
+                </p>
+              )}
+            </div>
+          </FormSection>
+        </div>
 
         {/* Sticky so Create is always in reach on a long package list. */}
-        <footer className="sticky bottom-0 z-10 -mx-9 mt-auto flex items-center justify-between gap-4 border-border border-t bg-canvas px-9 py-4">
-          <Button type="button" variant="ghost" onClick={() => leave(back)}>
-            Cancel
-          </Button>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" onClick={() => submit(false)}>
-              Create version
+        <footer className="sticky bottom-0 z-10 -mx-9 mt-auto bg-canvas px-9">
+          <div className={cn(PAGE_COLUMN, 'flex items-center justify-between gap-4 border-border border-t py-3')}>
+            <Button type="button" variant="ghost" onClick={() => leave(back)}>
+              Cancel
             </Button>
-            <Button onClick={() => submit(true)}>Create and install</Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="secondary" onClick={() => submit(false)}>
+                Create version
+              </Button>
+              <Button onClick={() => submit(true)}>Create and install</Button>
+            </div>
           </div>
         </footer>
       </form>

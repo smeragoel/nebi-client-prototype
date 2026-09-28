@@ -1,10 +1,16 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { listVersions } from '@/components/details/sync'
 import { toast } from '@/components/ui/toast'
 import { changeSummary, INITIAL_PROJECTS, ME, type Project, type Publication, publicationRef, resolve, type Version } from '@/data/sample'
 import type { ProjectDraft } from '@/lib/toml'
 
 /** Install runs as two steps in the real env_install job: download, then link. */
 export type Installing = { projectId: string; version: number; step: 1 | 2 }
+
+export type Pushing = { projectId: string; upTo: number | null }
+
+/** What the Create project page hands over: the environment plus version 1's path, tags and description. */
+export type NewProjectDraft = ProjectDraft & Pick<Version, 'tags' | 'description'> & { path: string }
 
 /** What the Create new version page hands over. */
 export type VersionDraft = Pick<Version, 'channels' | 'platforms' | 'requested' | 'tags' | 'description'> & { base: number }
@@ -18,15 +24,16 @@ type Store = {
   /** The install that just finished. Project details keeps its alert up for a few seconds, then drops it (2026-09-28 sync). */
   installDone: { projectId: string; version: number } | null
   dismissInstallDone: () => void
-  /** Project whose push is running (the Push button shows "Pushing…"). */
-  pushing: string | null
+  /** The push that's running. `upTo` is null for a push of everything (the rail's Push). */
+  pushing: Pushing | null
   /** `toast: false` when the caller shows progress itself (project details has its own install alert). */
   install: (projectId: string, version: number, opts?: { toast?: boolean }) => void
   uninstall: (projectId: string) => void
-  push: (projectId: string) => void
+  /** Pushes every unpushed version, or only those up to `upTo` (a version's own Push to server). */
+  push: (projectId: string, upTo?: number) => void
   pull: (projectId: string) => void
   /** Saves version 1 of a new project and returns its id. `andInstall` starts the install job right away. */
-  create: (draft: ProjectDraft & { path: string }, andInstall: boolean) => string
+  create: (draft: NewProjectDraft, andInstall: boolean) => string
   /** Saves a new version and returns its number. Tags it takes move off older versions. */
   createVersion: (projectId: string, draft: VersionDraft, andInstall: boolean) => number
   /** Replaces where one version is published. */
@@ -58,8 +65,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState(INITIAL_PROJECTS)
   const [installing, setInstalling] = useState<Installing | null>(null)
   const [installDone, setInstallDone] = useState<Store['installDone']>(null)
-  const [pushing, setPushing] = useState<string | null>(null)
-  const pushingRef = useRef<string | null>(null)
+  const [pushing, setPushing] = useState<Pushing | null>(null)
+  const pushingRef = useRef<Pushing | null>(null)
   const [justCreated, setJustCreated] = useState<Store['justCreated']>(null)
   const [serverConnected, setServerConnected] = useState(true)
   const timers = useRef<number[]>([])
@@ -114,16 +121,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   /** Pushes take a moment, so the in-sync delight plays when the push finishes, not on click. */
   const push = useCallback(
-    (projectId: string) => {
+    (projectId: string, upTo?: number) => {
       if (pushingRef.current) return
-      pushingRef.current = projectId
-      setPushing(projectId)
+      const job = { projectId, upTo: upTo ?? null }
+      pushingRef.current = job
+      setPushing(job)
       window.setTimeout(() => {
-        const newest = Math.max(...(find(projectId)?.versions.map((v) => v.number) ?? [0]))
+        const p = find(projectId)
+        const local = p?.versions.map((v) => v.number).sort((a, b) => a - b) ?? []
+        const newest = local.at(-1) ?? 0
+        const target = Math.min(upTo ?? newest, newest)
+        const sent = local.filter((n) => n > (p?.serverVersion ?? 0) && n <= target)
+        const left = local.filter((n) => n > target)
         pushingRef.current = null
         setPushing(null)
-        update(projectId, () => ({ serverVersion: newest }))
-        toast.add({ title: `Version ${newest} pushed`, description: 'This machine and the server are in sync.', type: 'success' })
+        update(projectId, () => ({ serverVersion: target }))
+        toast.add({
+          title: `${capitalize(listVersions(sent))} pushed`,
+          description: left.length
+            ? `${capitalize(listVersions(left))} ${left.length === 1 ? 'is' : 'are'} still only on this machine.`
+            : 'This machine and the server are in sync.',
+          type: 'success',
+        })
       }, PUSH_MS)
     },
     [update],
@@ -144,7 +163,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const create = useCallback(
-    (draft: ProjectDraft & { path: string }, andInstall: boolean) => {
+    (draft: NewProjectDraft, andInstall: boolean) => {
       const taken = new Set(current.current.map((p) => p.id))
       const slug = draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project'
       let id = slug
@@ -157,10 +176,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         versions: [
           {
             number: 1,
-            description: 'First version',
+            description: draft.description,
             author: ME,
             ageDays: 0,
-            tags: ['latest'],
+            tags: draft.tags,
             channels: draft.channels,
             platforms: draft.platforms,
             requested: draft.requested,
@@ -301,4 +320,8 @@ export function notBuilt(feature: string) {
     description: 'It is designed in Figma but not built here.',
     type: 'info',
   })
+}
+
+function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }

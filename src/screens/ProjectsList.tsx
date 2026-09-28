@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, Ellipsis, History, LayoutPanelTop, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, Ellipsis, History, LayoutTemplate, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { UninstallDialog } from '@/components/UninstallDialog'
@@ -103,7 +103,7 @@ export default function ProjectsList() {
       </div>
 
       <div className="relative w-80">
-        <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-[18px] -translate-y-1/2 text-muted-foreground" aria-hidden />
         <Input
           type="search"
           value={query}
@@ -217,7 +217,7 @@ function NewProjectButton() {
               Create from pixi.toml
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/projects/new')}>
-              <LayoutPanelTop />
+              <LayoutTemplate />
               Create from GUI
             </DropdownMenuItem>
           </DropdownMenuContent>

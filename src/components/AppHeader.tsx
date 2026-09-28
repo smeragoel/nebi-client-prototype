@@ -1,4 +1,4 @@
-import { BookOpen, Boxes, ExternalLink, Package, Server } from 'lucide-react'
+import { BookOpen, Boxes, Computer, ExternalLink, Package } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import nebiMark from '@/assets/nebi-mark.svg'
 import { ThemeMenu } from '@/components/ThemeMenu'
@@ -45,7 +45,7 @@ export function AppHeader() {
         >
           Projects
         </NavLink>
-        <NavLink icon={<Server />} render={<a href="#server" />} onClick={soon('The Server page')} className={ITEM}>
+        <NavLink icon={<Computer />} render={<a href="#server" />} onClick={soon('The Server page')} className={ITEM}>
           Server
         </NavLink>
         <NavLink icon={<Package />} render={<a href="#registries" />} onClick={soon('The Registries page')} className={ITEM}>

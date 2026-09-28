@@ -84,7 +84,8 @@ export function VersionRail({
               <Button
                 variant="outline"
                 size="xs"
-                loading={pushing === project.id}
+                loading={pushing?.projectId === project.id && pushing.upTo == null}
+                disabled={pushing != null && pushing.upTo != null}
                 loadingText="Pushing…"
                 onClick={() => push(project.id)}
               >
@@ -110,7 +111,7 @@ export function VersionRail({
 
         <div className="mt-3 flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-[18px] -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
               type="search"
               value={query}

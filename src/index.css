@@ -322,6 +322,18 @@
   body {
     @apply bg-canvas font-sans text-foreground antialiased;
   }
+
+  /* NDS Figma icons keep a 1.5px stroke at every size (1px on badge icons). Lucide's
+     default scales with the icon (1.33px at 16, 1.17px at 14), so pin it in screen px. */
+  svg.lucide {
+    stroke-width: 1.5px;
+  }
+  svg.lucide * {
+    vector-effect: non-scaling-stroke;
+  }
+  [data-slot="badge"] svg.lucide {
+    stroke-width: 1px;
+  }
 }
 
 /* App-owned header tokens (NDS header recipe). Keep below the Nebari theme blocks. */
