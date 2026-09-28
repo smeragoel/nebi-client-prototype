@@ -184,13 +184,19 @@ const LOCK: Record<string, LockEntry> = {
 }
 
 function lockKey(p: RequestedPackage) {
-  if (p.name === 'python') return p.constraint.startsWith('3.12') ? 'python@3.12' : 'python@3.11'
+  if (p.name === 'python') return /3\.1[2-9]/.test(p.constraint) ? 'python@3.12' : 'python@3.11'
   return p.name
+}
+
+/** Stand-in lock entry for packages typed into Create project that the sample lock doesn't know. */
+function unknownEntry(p: RequestedPackage): LockEntry {
+  const pinned = p.constraint.match(/\d+(\.\d+)*/)?.[0]
+  return { version: pinned ?? '1.0.0', channel: 'conda-forge', size: '2.1 MB' }
 }
 
 /** Requested packages first (in manifest order), then their dependencies A–Z. */
 export function resolve(requested: RequestedPackage[]): ResolvedPackage[] {
-  const direct = requested.map((p) => ({ name: p.name, ...LOCK[lockKey(p)] }))
+  const direct = requested.map((p) => ({ name: p.name, ...(LOCK[lockKey(p)] ?? unknownEntry(p)) }))
   const depNames = new Set<string>()
   for (const p of requested) for (const d of LOCK[lockKey(p)]?.deps ?? []) depNames.add(d)
   for (const p of requested) depNames.delete(p.name)

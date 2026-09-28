@@ -1,14 +1,17 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, Ellipsis, History, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Menu } from '@base-ui/react/menu'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, Ellipsis, History, LayoutPanelTop, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { UninstallDialog } from '@/components/UninstallDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Project } from '@/data/sample'
+import { newestLocal } from '@/components/details/sync'
 import { notBuilt, useStore } from '@/state/store'
 
 type SortKey = 'name' | 'version' | 'environment' | 'size' | 'remotes'
@@ -20,7 +23,8 @@ const bytes = (size: string | null) => {
   const [n, unit] = size.split(' ')
   return Number(n) * (SIZE_UNITS[unit] ?? 1)
 }
-const shownVersion = (p: Project) => p.installedVersion ?? p.lastInstalledVersion ?? 0
+/** Installed version, else the last one installed, else (never installed) the newest on this machine. */
+const shownVersion = (p: Project) => p.installedVersion ?? p.lastInstalledVersion ?? newestLocal(p)
 
 const sortValue: Record<SortKey, (p: Project) => string | number> = {
   name: (p) => p.name.toLowerCase(),
@@ -73,10 +77,7 @@ export default function ProjectsList() {
           <h1 className="font-bold text-3xl text-foreground">Projects</h1>
           <p className="text-base text-muted-foreground">Local projects on this machine</p>
         </div>
-        <Button onClick={() => notBuilt('New project')}>
-          <Plus />
-          New project
-        </Button>
+        <NewProjectButton />
       </div>
 
       <div className="relative w-80">
@@ -127,11 +128,43 @@ export default function ProjectsList() {
   )
 }
 
+/** Figma `01c - new Project dropdown` 2310:19662: split button, the main half opens the form. */
+function NewProjectButton() {
+  const navigate = useNavigate()
+  return (
+    <ButtonGroup aria-label="New project">
+      <Button onClick={() => navigate('/projects/new')}>
+        <Plus />
+        New project
+      </Button>
+      <ButtonGroupSeparator className="bg-primary-foreground/40" />
+      <Menu.Root>
+        <Menu.Trigger render={<Button size="icon" aria-label="More ways to create a project" />}>
+          <ChevronDown />
+        </Menu.Trigger>
+        <DropdownMenuPortal>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate('/projects/new?mode=toml')}>
+              <CodeXml />
+              Create from pixi.toml
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/projects/new')}>
+              <LayoutPanelTop />
+              Create from GUI
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </Menu.Root>
+    </ButtonGroup>
+  )
+}
+
 function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall: () => void }) {
   const { installing, install } = useStore()
   const navigate = useNavigate()
   const isInstalling = installing?.projectId === p.id
   const installed = p.installedVersion != null
+  const installTarget = p.lastInstalledVersion ?? newestLocal(p)
 
   return (
     <TableRow>
@@ -145,6 +178,8 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
         <span className="flex items-center gap-1.5">
           {installed ? (
             <span>v{p.installedVersion}</span>
+          ) : p.lastInstalledVersion == null ? (
+            <span className="text-muted-foreground">v{installTarget}</span>
           ) : (
             <>
               <span className="text-muted-foreground">v{p.lastInstalledVersion}</span>
@@ -181,7 +216,7 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
             loading={isInstalling}
             loadingText="Installing…"
             disabled={installing != null && !isInstalling}
-            onClick={() => p.lastInstalledVersion && install(p.id, p.lastInstalledVersion)}
+            onClick={() => install(p.id, installTarget)}
           >
             Install
           </Button>

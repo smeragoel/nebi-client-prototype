@@ -3,7 +3,10 @@
   "fileKey": "Wu8VTFA5IO5BjbvifZJMyZ",
   "screens": {
     "ProjectsList": "1774:2940",
+    "NewProjectMenu": "2310:19662",
     "CreateProject": "2309:16943",
+    "CreateProjectToml": "2675:8526",
+    "DiscardNewProject": "2671:8341",
     "ProjectDetailsInstalled": "2898:9525",
     "ProjectDetailsOtherVersion": "2903:8908",
     "VersionRowRedesign": "2940:11386",

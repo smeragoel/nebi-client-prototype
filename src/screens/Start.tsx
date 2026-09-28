@@ -7,7 +7,10 @@ const FIGMA_FILE = `https://www.figma.com/design/${figmaMap.fileKey}/Nebi-UI`
 // Index of screens this prototype will cover. Add a `path` once a screen is built.
 const screens: { name: keyof typeof figmaMap.screens; label: string; path?: string }[] = [
   { name: 'ProjectsList', label: 'Projects list', path: '/' },
-  { name: 'CreateProject', label: 'Create project' },
+  { name: 'NewProjectMenu', label: 'New project split button', path: '/' },
+  { name: 'CreateProject', label: 'Create project: form', path: '/projects/new' },
+  { name: 'CreateProjectToml', label: 'Create project: pixi.toml editor', path: '/projects/new?mode=toml' },
+  { name: 'DiscardNewProject', label: 'Discard new project (Cancel with entries)', path: '/projects/new' },
   { name: 'ProjectDetailsInstalled', label: 'Project details: installed version selected', path: '/projects/project-1?v=7' },
   { name: 'ProjectDetailsOtherVersion', label: 'Project details: other version selected', path: '/projects/project-1?v=5' },
   { name: 'VersionRowRedesign', label: 'Version row layout pass (used in the rail)', path: '/projects/project-1' },

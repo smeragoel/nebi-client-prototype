@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { AppHeader } from '@/components/AppHeader'
 import { Toaster } from '@/components/ui/toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import CreateProject from '@/screens/CreateProject'
 import ProjectDetails from '@/screens/ProjectDetails'
 import ProjectsList from '@/screens/ProjectsList'
 import Start from '@/screens/Start'
@@ -16,6 +17,7 @@ export default function App() {
             <AppHeader />
             <Routes>
               <Route path="/" element={<ProjectsList />} />
+              <Route path="/projects/new" element={<CreateProject />} />
               <Route path="/projects/:id" element={<ProjectDetails />} />
               <Route path="/screens" element={<Start />} />
             </Routes>

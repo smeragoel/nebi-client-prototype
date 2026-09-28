@@ -13,7 +13,7 @@ npm run dev
 
 Opens on http://localhost:5173 at the Projects list. `/screens` lists every screen in scope, whether it's built, and a link to its Figma frame.
 
-Built so far: Projects list (`1774:2940`) and project details (`2898:9525`, `2903:8908`) with the 2026-09-25 version-row layout pass (`2940:11386`), plus install / uninstall, push, pull, the older-version confirmation and the pixi.toml viewer. Buttons for screens that aren't built yet show an "isn't in the prototype yet" toast. State is in memory, so a reload resets the sample data (`src/data/sample.ts`).
+Built so far: Projects list (`1774:2940`) with the New project split button (`2310:19662`); Create project (`1811:19075`): the form (`2309:16943`) and the pixi.toml editor (`2675:8526`) on one page at `/projects/new` (`?mode=toml`), entries carried across when switching, a discard dialog on Cancel (`2671:8341`), and Create / Create and install landing on the new project (the form is replaced in history); and project details (`2898:9525`, `2903:8908`) with the 2026-09-25 version-row layout pass (`2940:11386`), plus install / uninstall, push, pull, the older-version confirmation and the pixi.toml viewer. Buttons for screens that aren't built yet show an "isn't in the prototype yet" toast. State is in memory, so a reload resets the sample data (`src/data/sample.ts`).
 
 Deployed on Vercel from the `main` branch of `smeragoel/nebi-client-prototype`; every push redeploys.
 
