@@ -201,6 +201,12 @@ function PushAction({ project, version: v, serverOnly }: { project: Project; ver
 /* ------------------------------------------------------------------ */
 
 /** The last header action, with a muted caption under it: size on disk, or what an install replaces. */
+/**
+ * The note under Install / Uninstall (Figma 2898:9525, 2903:8908): left-aligned to the button and
+ * wrapping at the button's width, so the column is only ever as wide as the button.
+ */
+const UNDER_BUTTON = 'block w-0 min-w-full text-muted-foreground-strong text-xs'
+
 function InstallAction({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
   const { installing, install, pull } = useStore()
   const [uninstallOpen, setUninstallOpen] = useState(false)
@@ -218,19 +224,19 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
 
   if (other === v.number) {
     return (
-      <div className="flex flex-col items-end gap-1">
+      <div className="flex flex-col items-start gap-1">
         <Button variant="outline" size="sm" onClick={() => setUninstallOpen(true)}>
           <PackageX />
           Uninstall
         </Button>
-        {project.size && <span className="text-muted-foreground-strong text-xs">{project.size} on disk</span>}
+        {project.size && <span className={UNDER_BUTTON}>{project.size} on disk</span>}
         <UninstallDialog project={project} open={uninstallOpen} onOpenChange={setUninstallOpen} />
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-start gap-1">
       <Button
         size="sm"
         loading={isInstalling}
@@ -242,7 +248,7 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
         Install
       </Button>
       {other != null && (
-        <span className="whitespace-nowrap text-muted-foreground-strong text-xs">
+        <span className={UNDER_BUTTON}>
           Replaces{' '}
           <Link to={`?v=${other}`} replace className="underline underline-offset-4 hover:text-primary">
             v{other}
