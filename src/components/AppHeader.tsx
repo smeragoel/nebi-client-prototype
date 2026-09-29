@@ -1,10 +1,11 @@
-import { BookOpen, Boxes, Computer, ExternalLink, Package } from 'lucide-react'
+import { BookOpen, Boxes, Computer, ExternalLink, Package, Server } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import nebiMark from '@/assets/nebi-mark.svg'
 import { ThemeMenu } from '@/components/ThemeMenu'
+import { Badge } from '@/components/ui/badge'
 import { MenuBarActions, MenuBarBrand, MenuBarNav, NavigationMenu, NavLink } from '@/components/ui/navigation-menu'
 import { cn } from '@/lib/utils'
-import { notBuilt } from '@/state/store'
+import { notBuilt, useStore } from '@/state/store'
 
 const ITEM = 'h-full rounded-none'
 const UNDERLINE =
@@ -14,6 +15,7 @@ const UNDERLINE =
 export function AppHeader() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const { connection } = useStore()
   const onProjects = pathname === '/' || pathname.startsWith('/projects')
 
   const soon = (feature: string) => (e: React.MouseEvent) => {
@@ -45,7 +47,7 @@ export function AppHeader() {
         >
           Projects
         </NavLink>
-        <NavLink icon={<Computer />} render={<a href="#server" />} onClick={soon('The Server page')} className={ITEM}>
+        <NavLink icon={<Computer />} active={pathname === '/server'} render={<Link to="/server" />} className={ITEM}>
           Server
         </NavLink>
         <NavLink icon={<Package />} render={<a href="#registries" />} onClick={soon('The Registries page')} className={ITEM}>
@@ -67,6 +69,18 @@ export function AppHeader() {
         </NavLink>
       </MenuBarNav>
       <MenuBarActions className="gap-2">
+        {/* 02a notes 2 and 4: a neutral chip names the connected server, never the person, and routes to
+            the Server page. No chip at all when there's no server. */}
+        {connection && (
+          <Badge
+            variant="outline"
+            className="border-border font-medium text-foreground"
+            render={<Link to="/server" aria-label={`Connected to ${connection.url}. Open the Server page`} />}
+          >
+            <Server aria-hidden />
+            {connection.url}
+          </Badge>
+        )}
         <ThemeMenu />
       </MenuBarActions>
     </NavigationMenu>

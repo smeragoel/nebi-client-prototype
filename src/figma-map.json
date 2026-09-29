@@ -1,5 +1,5 @@
 {
-  "_comment": "Maps prototype screens to Figma frames. File: Nebi UI (Wu8VTFA5IO5BjbvifZJMyZ), section `01 Projects` 1811:17438. Node IDs checked 2026-09-28. IDs change when frames are rebuilt.",
+  "_comment": "Maps prototype screens to Figma frames. File: Nebi UI (Wu8VTFA5IO5BjbvifZJMyZ), sections `01 Projects` 1811:17438 and `02 Server` 1811:17495. Node IDs checked 2026-09-28. IDs change when frames are rebuilt.",
   "fileKey": "Wu8VTFA5IO5BjbvifZJMyZ",
   "screens": {
     "ProjectsList": "1774:2940",
@@ -23,6 +23,18 @@
     "Installing": "2925:10612",
     "JustCreated": "2925:11253",
     "InSync": "2925:25499",
-    "VersionRow": "2931:11315"
+    "VersionRow": "2931:11315",
+    "ServerConnected": "2512:15552",
+    "PullAndInstall": "2317:9951",
+    "PullToast": "2317:10140",
+    "ManageConnection": "2371:28706",
+    "DisconnectConfirm": "2512:16372",
+    "ServerDisconnected": "2043:28463",
+    "ConnectServer": "2099:4743",
+    "ShareDialog": "2510:20936",
+    "ShareRoleMenu": "2510:21589",
+    "ShareAdding": "2510:21781",
+    "ShareToasts": "2510:21938",
+    "ServerUi": "2392:6914"
   }
 }

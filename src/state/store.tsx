@@ -1,7 +1,8 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { listVersions } from '@/components/details/sync'
 import { toast } from '@/components/ui/toast'
-import { changeSummary, INITIAL_PROJECTS, ME, type Project, type Publication, publicationRef, resolve, type Version } from '@/data/sample'
+import { changeSummary, INITIAL_PROJECTS, ME, type Project, project1History, type Publication, publicationRef, resolve, type Version } from '@/data/sample'
+import { type Connection, DEFAULT_CONNECTION, INITIAL_SERVER_PROJECTS, type Principal, type Role, type ServerProject } from '@/data/server'
 import type { ProjectDraft } from '@/lib/toml'
 
 /** Install runs as two steps in the real env_install job: download, then link. */
@@ -43,12 +44,32 @@ type Store = {
   /** False when this client has no Nebi server set up (empty state 1774:15524). */
   serverConnected: boolean
   loadScenario: (scenario: Scenario) => void
+
+  /** The one Nebi server this client talks to, or null (02b). */
+  connection: Connection | null
+  connect: (connection: Connection) => void
+  updateConnection: (connection: Connection) => void
+  /** Pulled projects stay on this machine and keep working; they just stop syncing. */
+  disconnect: (opts?: { silent?: boolean }) => void
+  /** Projects on the server this account can open (02a). */
+  serverProjects: ServerProject[]
+  syncedAt: number
+  syncing: boolean
+  refreshServer: () => void
+  /** The pull that's running. `localId` is set once the pull lands and the install starts. */
+  pulling: { serverId: string; localId: string | null } | null
+  /** Pulls a server project under `localName`, then installs it when `andInstall`. `onOpen` backs the toast's Open project. */
+  pullFromServer: (serverId: string, localName: string, andInstall: boolean, onOpen: (localId: string) => void) => void
+  /** Gives, changes or (role null) removes someone's access to a server project. `at` puts a new row back where it was (Undo). */
+  setAccess: (serverId: string, principal: Principal, role: Role | null, at?: number) => void
 }
 
 const StoreContext = createContext<Store | null>(null)
 
 const STEP_MS = 1800
 const PUSH_MS = 1200
+const PULL_MS = 1600
+const SYNC_MS = 900
 /** How long the finished install alert stays before it dismisses itself. */
 const INSTALL_DONE_MS = 5000
 /** Where Nebi puts a project when Path is left blank (GetWorkspacePath: app data + name). */
@@ -68,7 +89,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [pushing, setPushing] = useState<Pushing | null>(null)
   const pushingRef = useRef<Pushing | null>(null)
   const [justCreated, setJustCreated] = useState<Store['justCreated']>(null)
-  const [serverConnected, setServerConnected] = useState(true)
+  const [connection, setConnection] = useState<Connection | null>(DEFAULT_CONNECTION)
+  const serverConnected = connection != null
+  const [serverProjects, setServerProjects] = useState(INITIAL_SERVER_PROJECTS)
+  const [syncedAt, setSyncedAt] = useState(() => Date.now() - 2 * 60_000)
+  const [syncing, setSyncing] = useState(false)
+  const [pulling, setPulling] = useState<Store['pulling']>(null)
   const timers = useRef<number[]>([])
   // Latest projects for event handlers (toasts need values before the state update lands).
   const current = useRef(projects)
@@ -280,7 +306,125 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const next = scenario === 'default' ? INITIAL_PROJECTS : []
     current.current = next
     setProjects(next)
-    setServerConnected(scenario !== 'empty-not-connected')
+    setConnection(scenario === 'empty-not-connected' ? null : DEFAULT_CONNECTION)
+    setServerProjects(INITIAL_SERVER_PROJECTS)
+  }, [])
+
+  const connect = useCallback((next: Connection) => {
+    setConnection(next)
+    setSyncedAt(Date.now())
+    toast.add({ title: `Connected to ${next.url}`, description: 'Projects shared with you are listed on the Server page.', type: 'success' })
+  }, [])
+
+  const updateConnection = useCallback((next: Connection) => {
+    setConnection(next)
+    toast.add({ title: 'Connection updated', type: 'success' })
+  }, [])
+
+  const disconnect = useCallback((opts?: { silent?: boolean }) => {
+    const was = connectionRef.current
+    setConnection(null)
+    if (was && !opts?.silent) {
+      toast.add({ title: `Disconnected from ${was.url}`, description: 'Projects you pulled stay on this machine and keep working.' })
+    }
+  }, [])
+
+  const refreshServer = useCallback(() => {
+    setSyncing(true)
+    window.setTimeout(() => {
+      setSyncing(false)
+      setSyncedAt(Date.now())
+    }, SYNC_MS)
+  }, [])
+
+  const serverCurrent = useRef(serverProjects)
+  useEffect(() => {
+    serverCurrent.current = serverProjects
+  }, [serverProjects])
+  const connectionRef = useRef(connection)
+  useEffect(() => {
+    connectionRef.current = connection
+  }, [connection])
+
+  const pullFromServer = useCallback(
+    (serverId: string, localName: string, andInstall: boolean, onOpen: (localId: string) => void) => {
+      const sp = serverCurrent.current.find((x) => x.id === serverId)
+      if (!sp) return
+      const taken = new Set(current.current.map((p) => p.id))
+      const slug = localName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project'
+      let id = slug
+      for (let n = 2; taken.has(id); n++) id = `${slug}-${n}`
+      const n = sp.latestVersion
+      const open = { children: 'Open project', onClick: () => onOpen(id) }
+
+      setPulling({ serverId, localId: null })
+      // Figma `Toast confirmation` 2317:10140: one toast follows the job from start to finish.
+      const toastId = toast.add({
+        type: 'loading',
+        title: sp.name,
+        description: andInstall ? 'Pull and install job started' : 'Pull job started',
+        actionProps: { children: 'View in Jobs', onClick: () => notBuilt('The Jobs page') },
+      })
+
+      window.setTimeout(() => {
+        const history = project1History().slice(0, n)
+        const project: Project = {
+          id,
+          name: localName,
+          path: `/home/user/${localName}`,
+          versions: history.map((v, i) => ({ ...v, publications: [], tags: i === n - 1 ? ['latest'] : [] })),
+          serverOnly: [],
+          serverVersion: n,
+          installedVersion: null,
+          lastInstalledVersion: null,
+          size: null,
+          remotes: ['team-nebi'],
+          ...(localName !== sp.name ? { serverName: sp.name } : {}),
+        }
+        current.current = [...current.current, project]
+        setProjects(current.current)
+
+        if (!andInstall) {
+          setPulling(null)
+          toast.update(toastId, {
+            type: 'success',
+            title: `${sp.name} pulled`,
+            description: `Version ${n} is on this machine. Install it when you need it.`,
+            actionProps: open,
+          })
+          return
+        }
+        setPulling({ serverId, localId: id })
+        toast.update(toastId, { description: `Pulled. Installing version ${n}…` })
+        install(id, n, { toast: false })
+        window.setTimeout(() => {
+          setPulling(null)
+          toast.update(toastId, {
+            type: 'success',
+            title: `${sp.name} installed`,
+            description: `Version ${n} is ready to use on this machine.`,
+            actionProps: open,
+          })
+        }, STEP_MS * 2 + 50)
+      }, PULL_MS)
+    },
+    [install],
+  )
+
+  const setAccess = useCallback((serverId: string, principal: Principal, role: Role | null, at?: number) => {
+    setServerProjects((all) =>
+      all.map((sp) => {
+        if (sp.id !== serverId) return sp
+        const has = sp.access.some((g) => g.principal.id === principal.id)
+        const access =
+          role == null
+            ? sp.access.filter((g) => g.principal.id !== principal.id)
+            : has
+              ? sp.access.map((g) => (g.principal.id === principal.id ? { ...g, role } : g))
+              : sp.access.toSpliced(at ?? sp.access.length, 0, { principal, role })
+        return { ...sp, access }
+      }),
+    )
   }, [])
 
   const dismissInstallDone = useCallback(() => setInstallDone(null), [])
@@ -288,8 +432,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       projects, installing, installDone, dismissInstallDone, pushing, install, uninstall, push, pull, create, createVersion, publish, justCreated, serverConnected, loadScenario,
+      connection, connect, updateConnection, disconnect, serverProjects, syncedAt, syncing, refreshServer, pulling, pullFromServer, setAccess,
     }),
-    [projects, installing, installDone, dismissInstallDone, pushing, install, uninstall, push, pull, create, createVersion, publish, justCreated, serverConnected, loadScenario],
+    [projects, installing, installDone, dismissInstallDone, pushing, install, uninstall, push, pull, create, createVersion, publish, justCreated, serverConnected, loadScenario,
+      connection, connect, updateConnection, disconnect, serverProjects, syncedAt, syncing, refreshServer, pulling, pullFromServer, setAccess],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

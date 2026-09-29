@@ -174,7 +174,7 @@ function EmptyState() {
         </Button>
         {serverConnected ? (
           <>
-            <Button variant="secondary" onClick={() => notBuilt('Pull from server')}>
+            <Button variant="secondary" onClick={() => navigate('/server')}>
               Pull from server
             </Button>
             <Button variant="secondary" onClick={() => notBuilt('Pull from registry')}>
@@ -183,7 +183,7 @@ function EmptyState() {
           </>
         ) : (
           <>
-            <Button variant="secondary" onClick={() => notBuilt('Connect to server')}>
+            <Button variant="secondary" onClick={() => navigate('/server?dialog=connect')}>
               Connect to server
             </Button>
             <Button variant="secondary" onClick={() => notBuilt('Add a registry')}>
@@ -309,7 +309,7 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
         ) : (
           <span className="flex flex-wrap gap-1">
             {p.remotes.map((r) => (
-              <Button key={r} variant="ghost" size="xs" onClick={() => notBuilt('Remote details')}>
+              <Button key={r} variant="ghost" size="xs" onClick={() => (r === 'team-nebi' ? navigate('/server') : notBuilt('Remote details'))}>
                 {r}
               </Button>
             ))}

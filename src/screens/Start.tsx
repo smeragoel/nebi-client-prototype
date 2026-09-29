@@ -27,6 +27,18 @@ const screens: { name: keyof typeof figmaMap.screens; label: string; path?: stri
   { name: 'UninstallConfirm', label: 'Uninstall confirmation', path: '/projects/project-1?v=7' },
   { name: 'VersionRowRedesign', label: 'Version row layout pass (2026-09-25 proposal, not used)' },
   { name: 'PublishAfterSave', label: 'Publish: after save, per-registry results' },
+  { name: 'ServerConnected', label: 'Server (connected), row menu: Pull project, Manage access', path: '/server?state=connected' },
+  { name: 'PullAndInstall', label: 'Pull and install: local name', path: '/server?dialog=pull-install&project=ml-baseline' },
+  { name: 'PullToast', label: 'Pull and install job toast (pull ml-baseline to see it run)', path: '/server' },
+  { name: 'ManageConnection', label: 'Manage connection', path: '/server?dialog=manage' },
+  { name: 'DisconnectConfirm', label: 'Disconnect confirmation (Manage connection → Disconnect)', path: '/server?dialog=manage' },
+  { name: 'ServerDisconnected', label: 'Server (disconnected)', path: '/server?state=disconnected' },
+  { name: 'ConnectServer', label: 'Connect server', path: '/server?state=disconnected&dialog=connect' },
+  { name: 'ShareDialog', label: 'Share (client: Manage access)', path: '/server?dialog=share&project=ml-baseline' },
+  { name: 'ShareRoleMenu', label: 'Share: role menu', path: '/server?dialog=share&project=ml-baseline' },
+  { name: 'ShareAdding', label: 'Share: adding people (type “jo”)', path: '/server?dialog=share&project=ml-baseline' },
+  { name: 'ShareToasts', label: 'Share toasts with Undo', path: '/server?dialog=share&project=ml-baseline' },
+  { name: 'ServerUi', label: 'Server UI (administrative, share only)', path: '/server-ui' },
 ]
 
 export default function Start() {

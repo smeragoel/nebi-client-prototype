@@ -54,6 +54,8 @@ export type Project = {
   /** Size on disk. Stored per project, not per version. */
   size: string | null
   remotes: string[]
+  /** Name on the server, when it was pulled under a different local name. */
+  serverName?: string
 }
 
 const PLATFORMS = ['linux-64', 'linux-aarch64']
@@ -66,7 +68,7 @@ const withPython312 = (list: RequestedPackage[]) =>
   list.map((p) => (p.name === 'python' ? pkg('python', '3.12.*') : p))
 
 /** Project_1's history, used as-is for Project_1 and trimmed for the others. */
-function project1History(): Version[] {
+export function project1History(): Version[] {
   const v1 = [...base]
   const v2 = [...v1, ...reporting]
   const v3 = [...v2, pkg('scikit-learn', '>=1.5')]
