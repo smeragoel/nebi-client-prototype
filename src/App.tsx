@@ -5,6 +5,8 @@ import { Toaster } from '@/components/ui/toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import CreateProject from '@/screens/CreateProject'
 import CreateVersion from '@/screens/CreateVersion'
+import JobDetails from '@/screens/JobDetails'
+import Jobs from '@/screens/Jobs'
 import ProjectDetails from '@/screens/ProjectDetails'
 import ProjectsList from '@/screens/ProjectsList'
 import Server from '@/screens/Server'
@@ -27,6 +29,8 @@ export default function App() {
               <Route path="/projects/:id/new-version" element={<CreateVersion />} />
               <Route path="/server" element={<Server />} />
               <Route path="/server-ui" element={<ServerUi />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/jobs/:id" element={<JobDetails />} />
               <Route path="/screens" element={<Start />} />
             </Routes>
           </div>

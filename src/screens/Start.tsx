@@ -39,6 +39,11 @@ const screens: { name: keyof typeof figmaMap.screens; label: string; path?: stri
   { name: 'ShareAdding', label: 'Share: adding people (type “jo”)', path: '/server?dialog=share&project=ml-baseline' },
   { name: 'ShareToasts', label: 'Share toasts with Undo', path: '/server?dialog=share&project=ml-baseline' },
   { name: 'ServerUi', label: 'Server UI (administrative, share only)', path: '/server-ui' },
+  { name: 'Jobs', label: 'Jobs list', path: '/jobs' },
+  { name: 'JobsProjectFilter', label: 'Jobs: Project filter with search', path: '/jobs' },
+  { name: 'JobsRowMenu', label: 'Jobs: row menu (View project, Cancel job on a running job)', path: '/jobs' },
+  { name: 'JobFailed', label: 'Job details: failed', path: '/jobs/9a7d4e2c-1f36-4b88-a0c5-e62b9f0d8471' },
+  { name: 'JobRunning', label: 'Job details: running (log streams, Cancel job)', path: '/jobs/b3e21d07-6c4f-4a9b-8f12-7d95e0c43a68' },
 ]
 
 export default function Start() {
@@ -46,7 +51,7 @@ export default function Start() {
     <main className="mx-auto w-full max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-semibold text-foreground">Nebi client prototype</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Every screen in scope, what's built, and its Figma frame. Designs as of 2026-09-28. Reloading a page resets the sample data.
+        Every screen in scope, what's built, and its Figma frame. Designs as of 2026-09-29. Reloading a page resets the sample data.
       </p>
       <ul className="mt-8 divide-y divide-border rounded-md border border-border">
         {screens.map((s) => (

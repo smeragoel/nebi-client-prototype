@@ -264,7 +264,7 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
 function InstallAlert({ project, version: v }: { project: Project; version: Version }) {
   const { installing, installDone, dismissInstallDone } = useStore()
   if (installing?.projectId === project.id && installing.version === v.number) {
-    return <InstallingStrip version={v} step={installing.step} />
+    return <InstallingStrip version={v} step={installing.step} jobId={installing.jobId} />
   }
   if (installDone?.projectId !== project.id || installDone.version !== v.number) return null
   return (
@@ -284,7 +284,8 @@ function InstallAlert({ project, version: v }: { project: Project; version: Vers
  * Delight frame 2925:10612: stage from the env_install job, plus the latest pixi log line in mono.
  * The log line cycles through this version's resolved packages to stand in for the real job log.
  */
-function InstallingStrip({ version: v, step }: { version: Version; step: 1 | 2 }) {
+function InstallingStrip({ version: v, step, jobId }: { version: Version; step: 1 | 2; jobId: string }) {
+  const navigate = useNavigate()
   const packages = useMemo(() => resolve(v.requested).filter((p) => p.size), [v])
   const [i, setI] = useState(0)
   useEffect(() => {
@@ -305,7 +306,7 @@ function InstallingStrip({ version: v, step }: { version: Version; step: 1 | 2 }
             {line.name} {line.version} · {line.channel} · {line.size}
           </code>
         )}
-        <Button variant="link" size="xs" className="text-info-foreground" onClick={() => notBuilt('The job log')}>
+        <Button variant="link" size="xs" className="text-info-foreground" onClick={() => navigate(`/jobs/${jobId}`)}>
           View log
         </Button>
       </span>

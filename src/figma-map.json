@@ -1,5 +1,5 @@
 {
-  "_comment": "Maps prototype screens to Figma frames. File: Nebi UI (Wu8VTFA5IO5BjbvifZJMyZ), sections `01 Projects` 1811:17438 and `02 Server` 1811:17495. Node IDs checked 2026-09-28. IDs change when frames are rebuilt.",
+  "_comment": "Maps prototype screens to Figma frames. File: Nebi UI (Wu8VTFA5IO5BjbvifZJMyZ), sections `01 Projects` 1811:17438, `02 Server` 1811:17495 and `05 Jobs` 2399:6910. Node IDs checked 2026-09-29. IDs change when frames are rebuilt.",
   "fileKey": "Wu8VTFA5IO5BjbvifZJMyZ",
   "screens": {
     "ProjectsList": "1774:2940",
@@ -35,6 +35,11 @@
     "ShareRoleMenu": "2510:21589",
     "ShareAdding": "2510:21781",
     "ShareToasts": "2510:21938",
-    "ServerUi": "2392:6914"
+    "ServerUi": "2392:6914",
+    "Jobs": "2399:7084",
+    "JobsProjectFilter": "2764:13743",
+    "JobsRowMenu": "2429:7793",
+    "JobFailed": "2431:7330",
+    "JobRunning": "2435:7405"
   }
 }

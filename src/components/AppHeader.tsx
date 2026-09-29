@@ -53,7 +53,12 @@ export function AppHeader() {
         <NavLink icon={<Package />} render={<a href="#registries" />} onClick={soon('The Registries page')} className={ITEM}>
           Registries
         </NavLink>
-        <NavLink icon={<BookOpen />} render={<a href="#jobs" />} onClick={soon('The Jobs page')} className={ITEM}>
+        <NavLink
+          icon={<BookOpen />}
+          active={pathname === '/jobs'}
+          render={<Link to="/jobs" />}
+          className={cn(ITEM, pathname.startsWith('/jobs/') && UNDERLINE)}
+        >
           Jobs
         </NavLink>
         <NavLink
