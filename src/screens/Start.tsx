@@ -22,6 +22,7 @@ const screens: { name: keyof typeof figmaMap.screens; label: string; path?: stri
   { name: 'CreateNewVersion', label: 'Create new version (from version 7)', path: '/projects/project-1/new-version?from=7' },
   { name: 'OlderBaseConfirm', label: 'Older-base confirmation (Create new version on v5)', path: '/projects/project-1?v=5' },
   { name: 'JustCreated', label: 'Version just created (save the Create new version page)', path: '/projects/project-1/new-version?from=5' },
+  { name: 'CompareVersions', label: 'Compare versions (installed against the server’s latest)', path: '/projects/project-1/compare' },
   { name: 'PublishModal', label: 'Publish (simplified, 2026-09-28)', path: '/projects/project-1?v=5' },
   { name: 'ServerAhead', label: 'Server ahead', path: '/projects/project-pulled-from-server' },
   { name: 'UninstallConfirm', label: 'Uninstall confirmation', path: '/projects/project-1?v=7' },

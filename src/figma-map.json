@@ -16,6 +16,7 @@
     "CreateNewVersion": "3006:11933",
     "CreateNewVersionToml": "3011:11986",
     "OlderBaseConfirm": "2916:9418",
+    "CompareVersions": "2605:25880",
     "PublishModal": "2969:13055",
     "PublishAfterSave": "2922:10106",
     "ServerAhead": "2917:24512",

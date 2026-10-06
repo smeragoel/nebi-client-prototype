@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from 'react-router-dom'
 import { AppHeader } from '@/components/AppHeader'
 import { Toaster } from '@/components/ui/toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import CompareVersions from '@/screens/CompareVersions'
 import CreateProject from '@/screens/CreateProject'
 import CreateVersion from '@/screens/CreateVersion'
 import JobDetails from '@/screens/JobDetails'
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/projects/new" element={<CreateProject />} />
               <Route path="/projects/:id" element={<ProjectDetails />} />
               <Route path="/projects/:id/new-version" element={<CreateVersion />} />
+              <Route path="/projects/:id/compare" element={<CompareVersions />} />
               <Route path="/server" element={<Server />} />
               <Route path="/server-ui" element={<ServerUi />} />
               <Route path="/jobs" element={<Jobs />} />

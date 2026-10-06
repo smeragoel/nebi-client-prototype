@@ -1,5 +1,6 @@
 import { Check, Laptop, Search, Server, Upload } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { type Project, timeGroup, type Version } from '@/data/sample'
 import { cn } from '@/lib/utils'
-import { notBuilt, useStore } from '@/state/store'
+import { useStore } from '@/state/store'
 import { newestLocal, railVersions, type SyncMarker, syncMarker } from './sync'
 import { useSyncMotion } from './useSyncMotion'
 
@@ -28,6 +29,7 @@ export function VersionRail({
   onSelect: (n: number) => void
 }) {
   const { push, pull, pushing } = useStore()
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const listRef = useRef<HTMLElement>(null)
 
@@ -72,7 +74,7 @@ export function VersionRail({
       <div className="flex flex-col">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-base text-foreground leading-5">Versions</h2>
-          <Button variant="outline" size="sm" onClick={() => notBuilt('Compare versions')}>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/projects/${project.id}/compare?from=${selected}`)}>
             Compare versions
           </Button>
         </div>
