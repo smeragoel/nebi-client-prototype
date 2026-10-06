@@ -66,7 +66,7 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
         <p className="text-base text-foreground">{v.description}</p>
 
         <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label={`Version ${v.number} actions`}>
-          <Button variant="secondary" size="sm" onClick={() => notBuilt('Compare versions')}>
+          <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${project.id}/compare?from=${v.number}`)}>
             <GitCompare />
             Compare versions
           </Button>
