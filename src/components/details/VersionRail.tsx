@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Laptop, Search, Server, Upload } from 'lucide-react'
+import { Check, Laptop, Search, Server, Upload } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { PersonAvatar } from '@/components/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -109,22 +109,16 @@ export function VersionRail({
           </Notice>
         </Collapse>
 
-        <div className="mt-3 flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-[18px] -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search versions"
-              aria-label="Search versions"
-              className="pl-9"
-            />
-          </div>
-          <Button variant="outline" onClick={() => notBuilt('Version filters')}>
-            Filters
-            <ChevronDown />
-          </Button>
+        <div className="relative mt-3">
+          <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-[18px] -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search versions"
+            aria-label="Search versions"
+            className="pl-9"
+          />
         </div>
       </div>
 

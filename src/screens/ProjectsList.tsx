@@ -177,8 +177,8 @@ function EmptyState() {
             <Button variant="secondary" onClick={() => navigate('/server')}>
               Pull from server
             </Button>
-            <Button variant="secondary" onClick={() => notBuilt('Pull from registry')}>
-              Pull from registry
+            <Button variant="secondary" onClick={() => notBuilt('Import from registry')}>
+              Import from registry
             </Button>
           </>
         ) : (
