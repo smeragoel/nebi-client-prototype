@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageX, Plus, Search, Server, SquareArrowUp, Upload, X } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageX, Plus, Search, Server, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
@@ -14,7 +14,9 @@ import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTab } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { failedInstall } from '@/data/jobs'
 import { fullDate, ME, type Project, pixiToml, resolve, type Version } from '@/data/sample'
+import { cn } from '@/lib/utils'
 import { notBuilt, useStore } from '@/state/store'
 import { PublishDialog } from './PublishDialog'
 import { listVersions, newestLocal } from './sync'
@@ -63,7 +65,6 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
                   {serverOnly ? `Pull version ${v.number} first` : `Creates a new version based on version ${v.number}`}
                 </TooltipContent>
               </Tooltip>
-              <PushAction project={project} version={v} serverOnly={serverOnly} />
               <Button variant="outline" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
                 <Upload />
                 Publish
@@ -163,39 +164,6 @@ function VersionMeta({ project, version: v, serverOnly }: { project: Project; ve
   )
 }
 
-/**
- * Figma 2898:9675: only on a version this machine has that the server doesn't yet. It pushes up to
- * this version; newer unpushed ones stay here (the rail's Push sends everything). When older
- * versions have to go too, the tooltip names them.
- */
-function PushAction({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
-  const { push, pushing } = useStore()
-  if (serverOnly || project.serverVersion == null || v.number <= project.serverVersion) return null
-  const server = project.serverVersion
-  const sends = project.versions.map((x) => x.number).filter((n) => n > server && n <= v.number).sort((a, b) => a - b)
-  const props = {
-    variant: 'outline',
-    size: 'sm',
-    loading: pushing?.projectId === project.id && pushing.upTo === v.number,
-    loadingText: 'Pushing…',
-    disabled: pushing != null && pushing.upTo !== v.number,
-    onClick: () => push(project.id, v.number),
-  } as const
-  const label = (
-    <>
-      <SquareArrowUp />
-      Push to server
-    </>
-  )
-  if (sends.length === 1) return <Button {...props}>{label}</Button>
-  return (
-    <Tooltip>
-      <TooltipTrigger render={<Button {...props} />}>{label}</TooltipTrigger>
-      <TooltipContent>Pushes {listVersions(sends)}</TooltipContent>
-    </Tooltip>
-  )
-}
-
 /* ------------------------------------------------------------------ */
 /* Install / Uninstall                                                 */
 /* ------------------------------------------------------------------ */
@@ -208,8 +176,9 @@ function PushAction({ project, version: v, serverOnly }: { project: Project; ver
 const UNDER_BUTTON = 'block w-0 min-w-full text-muted-foreground-strong text-xs'
 
 function InstallAction({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
-  const { installing, install, pull } = useStore()
+  const { installing, install, pull, jobs } = useStore()
   const [uninstallOpen, setUninstallOpen] = useState(false)
+  const failed = failedInstall(jobs, project.id)
   const isInstalling = installing?.projectId === project.id && installing.version === v.number
   const other = project.installedVersion
 
@@ -247,6 +216,15 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
         <Import />
         Install
       </Button>
+      {/* User test 7 Oct; not in Figma yet. Only when the project's latest env_install job failed. */}
+      {failed && (
+        <span className={cn(UNDER_BUTTON, 'text-destructive-foreground')}>
+          Install failed ·{' '}
+          <Link to={`/jobs/${failed.id}`} className="underline underline-offset-4">
+            View job
+          </Link>
+        </span>
+      )}
       {other != null && (
         <span className={UNDER_BUTTON}>
           Replaces{' '}

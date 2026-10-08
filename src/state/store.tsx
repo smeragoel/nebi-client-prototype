@@ -2,7 +2,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { useNavigate } from 'react-router-dom'
 import { listVersions } from '@/components/details/sync'
 import { toast } from '@/components/ui/toast'
-import { installLines, isActive, type Job, JOB_TYPE_LABEL, type JobType, lockLines, restoreLines, sampleJobs } from '@/data/jobs'
+import { installLines, isActive, type Job, JOB_TYPE_LABEL, type JobType, lockLines, restoreLines, SANDBOX_INSTALL_ERROR, sampleJobs, sandboxDownloadLines, sandboxErrorLines } from '@/data/jobs'
 import { changeSummary, INITIAL_PROJECTS, ME, type Project, project1History, type Publication, publicationRef, resolve, type Version } from '@/data/sample'
 import { type Connection, DEFAULT_CONNECTION, INITIAL_SERVER_PROJECTS, type Principal, type Role, type ServerProject } from '@/data/server'
 import type { ProjectDraft } from '@/lib/toml'
@@ -83,6 +83,8 @@ const LOG_LINE_MS = 900
 const INSTALL_DONE_MS = 5000
 /** Where Nebi puts a project when Path is left blank (GetWorkspacePath: app data + name). */
 const DEFAULT_PROJECTS_DIR = '/home/user/.local/share/nebi/projects'
+/** The project whose install always fails, for the "find out why an install failed" test task. */
+const FAILING_INSTALL = 'sandbox'
 // Size is per project in the data model; these stand in for a fresh install.
 const SIZE_AFTER_INSTALL: Record<string, string> = {
   'project-1': '1.2 GB',
@@ -169,8 +171,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       for (const t of timers.current) window.clearTimeout(t)
       setInstallDone(null)
       const v = find(projectId)?.versions.find((x) => x.number === version)
-      const jobId = addJob('env_install', projectId, ['Running: pixi install -v'], { pending: v ? installLines(v) : [] })
+      const fails = projectId === FAILING_INSTALL
+      const pending = fails ? sandboxDownloadLines : v ? installLines(v) : []
+      const jobId = addJob('env_install', projectId, ['Running: pixi install -v'], { pending })
       setInstalling({ projectId, version, step: 1, jobId })
+      // sandbox's download always drops (user test, 7 Oct): the job fails in step 1 and nothing is installed.
+      if (fails) {
+        timers.current = [
+          window.setTimeout(() => {
+            setInstalling(null)
+            updateJob(jobId, (j) => ({
+              status: 'failed',
+              endedAt: Date.now(),
+              log: [...j.log, ...j.pending, ...sandboxErrorLines],
+              pending: [],
+              error: SANDBOX_INSTALL_ERROR,
+            }))
+            toast.add({
+              title: `Version ${version} couldn’t install`,
+              description: 'A package download failed. Nothing changed on this machine.',
+              type: 'error',
+              actionProps: { children: 'View job', onClick: () => navigate(`/jobs/${jobId}`) },
+            })
+          }, STEP_MS * 2),
+        ]
+        return jobId
+      }
       timers.current = [
         window.setTimeout(() => setInstalling({ projectId, version, step: 2, jobId }), STEP_MS),
         window.setTimeout(() => {
@@ -196,7 +222,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ]
       return jobId
     },
-    [update, addJob, updateJob],
+    [update, addJob, updateJob, navigate],
   )
 
   const cancelJob = useCallback(
