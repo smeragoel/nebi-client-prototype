@@ -65,10 +65,13 @@ export const INITIAL_SERVER_PROJECTS: ServerProject[] = [
   { id: 'jatic-cosmos', name: 'jatic-cosmos', latestVersion: 2, namespace: 'team-jatic', access: [owner, { principal: who('team-jatic'), role: 'edit' }] },
   { id: 'nebi-chat', name: 'nebi-chat', latestVersion: 7, namespace: 'Personal', access: [owner] },
   { id: 'oci-test', name: 'oci-test', latestVersion: 1, namespace: 'team-nebi', access: [owner, { principal: who('team-nebi'), role: 'view' }] },
-  { id: 'project-1', name: 'Project_1', latestVersion: 6, namespace: 'Personal', access: [owner, { principal: who('alex'), role: 'edit' }] },
   {
-    id: 'project-pulled-from-server', name: 'Project_pulled_from_server', latestVersion: 3, namespace: 'team-nebi',
-    access: [owner, { principal: who('alex'), role: 'edit' }, { principal: who('team-nebi'), role: 'view' }],
+    id: 'project-1', name: 'Project_1', latestVersion: 7, namespace: 'team-jatic',
+    access: [owner, { principal: who('alex'), role: 'edit' }, { principal: who('jordan'), role: 'edit' }],
+  },
+  {
+    id: 'project-pulled-from-server', name: 'eval-pipeline', latestVersion: 3, namespace: 'team-jatic',
+    access: [owner, { principal: who('alex'), role: 'edit' }, { principal: who('team-jatic'), role: 'view' }],
   },
   { id: 'oci-registry', name: 'oci_registry', latestVersion: 7, namespace: 'team-nebi', access: [owner, { principal: who('team-nebi'), role: 'edit' }] },
 ]
