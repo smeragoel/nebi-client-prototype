@@ -342,9 +342,9 @@ function SharedWith({ project: p }: { project: Project }) {
         render={<span tabIndex={0} className="flex w-fit items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring" />}
         aria-label={`Shared with ${others.map((g) => g.principal.name).join(', ')}`}
       >
-        <span className="flex -space-x-1.5">
+        <span className="flex gap-1">
           {shown.map((g) => (
-            <Avatar key={g.principal.id} className="ring-2 ring-background">
+            <Avatar key={g.principal.id}>
               <AvatarFallback>{g.principal.initials}</AvatarFallback>
             </Avatar>
           ))}
