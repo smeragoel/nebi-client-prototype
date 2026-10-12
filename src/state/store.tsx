@@ -279,6 +279,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         pushingRef.current = null
         setPushing(null)
         update(projectId, () => ({ serverVersion: target }))
+        // The server copy matches by name, as on the Server screen and in Share.
+        if (p) {
+          const serverName = p.serverName ?? p.name
+          setServerProjects((all) =>
+            all.map((sp) => (sp.name === serverName ? { ...sp, latestVersion: Math.max(sp.latestVersion, target) } : sp)),
+          )
+        }
         toast.add({
           title: `${capitalize(listVersions(sent))} pushed`,
           description: left.length
