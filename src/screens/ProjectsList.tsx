@@ -1,21 +1,23 @@
 import { Menu } from '@base-ui/react/menu'
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, Ellipsis, History, LayoutTemplate, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, History, LayoutTemplate, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Avatar, AvatarFallback } from '@/components/avatar'
 import { UninstallDialog } from '@/components/UninstallDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { failedInstall } from '@/data/jobs'
 import type { Project } from '@/data/sample'
+import { ME_SERVER, ROLE_LABEL } from '@/data/server'
 import { newestLocal } from '@/components/details/sync'
 import { notBuilt, type Scenario, useStore } from '@/state/store'
 
-type SortKey = 'name' | 'version' | 'environment' | 'size' | 'remotes'
+type SortKey = 'name' | 'version' | 'environment' | 'size'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
 
 const SIZE_UNITS: Record<string, number> = { KB: 1e3, MB: 1e6, GB: 1e9 }
@@ -32,12 +34,11 @@ const sortValue: Record<SortKey, (p: Project) => string | number> = {
   version: shownVersion,
   environment: (p) => (p.installedVersion ? 0 : 1),
   size: (p) => bytes(p.size),
-  remotes: (p) => p.remotes.join(',').toLowerCase(),
 }
 
 /** Figma `01a - Main Projects` 1774:2940. */
 export default function ProjectsList() {
-  const { projects, loadScenario } = useStore()
+  const { projects, loadScenario, serverConnected } = useStore()
   const [params, setParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>({ key: 'name', dir: 'asc' })
@@ -121,18 +122,18 @@ export default function ProjectsList() {
             {head('name', 'Project name')}
             {head('version', 'Version', 'w-[200px]')}
             {head('environment', 'Environment', 'w-[196px]')}
-            {head('size', 'Size', 'w-[194px]')}
-            {head('remotes', 'Connected remotes', 'w-[280px]')}
-            <TableHead className="w-[74px]">Actions</TableHead>
+            {head('size', 'Installed size', 'w-[194px]')}
+            {/* Figma 1774:2940. Only with a server, since access lives on the server copy. */}
+            {serverConnected && <TableHead className="w-[220px]">Shared</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((p) => (
-            <ProjectRow key={p.id} project={p} onUninstall={() => setUninstalling(p)} />
+            <ProjectRow key={p.id} project={p} shared={serverConnected} onUninstall={() => setUninstalling(p)} />
           ))}
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={serverConnected ? 5 : 4} className="h-24 text-center text-muted-foreground">
                 No projects match “{query}”.
               </TableCell>
             </TableRow>
@@ -228,7 +229,7 @@ function NewProjectButton() {
   )
 }
 
-function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall: () => void }) {
+function ProjectRow({ project: p, shared, onUninstall }: { project: Project; shared: boolean; onUninstall: () => void }) {
   const { installing, install, jobs } = useStore()
   const navigate = useNavigate()
   const isInstalling = installing?.projectId === p.id
@@ -236,7 +237,7 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
   const installed = p.installedVersion != null
   const installTarget = p.lastInstalledVersion ?? newestLocal(p)
 
-  // The whole row opens the project. Controls inside it (Install, remotes, the menu) keep their own
+  // The whole row opens the project. Controls inside it (Install, the badges) keep their own
   // action; the name link stays the keyboard path, so the row itself isn't a tab stop.
   const openRow = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement
@@ -313,39 +314,56 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
 
       <TableCell className="h-10 py-2">{p.size ?? '—'}</TableCell>
 
-      <TableCell className="h-10 py-1">
-        {p.remotes.length === 0 ? (
-          '—'
-        ) : (
-          <span className="flex flex-wrap gap-1">
-            {p.remotes.map((r) => (
-              <Button key={r} variant="ghost" size="xs" onClick={() => (r === 'team-nebi' ? navigate('/server') : notBuilt('Remote details'))}>
-                {r}
-              </Button>
-            ))}
-          </span>
-        )}
-      </TableCell>
-
-      <TableCell className="h-10 py-1">
-        <DropdownMenu>
-          <DropdownMenuTrigger variant="ghost" className="size-7 px-0" aria-label={`Actions for ${p.name}`}>
-            <Ellipsis />
-          </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate(`/projects/${p.id}/new-version?from=${newestLocal(p)}`)}>
-                <Pencil />
-                Create new version
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => notBuilt('Delete project')}>
-                <Trash2 />
-                Delete project…
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenuPortal>
-        </DropdownMenu>
-      </TableCell>
+      {shared && (
+        <TableCell className="h-10 py-1">
+          <SharedWith project={p} />
+        </TableCell>
+      )}
     </TableRow>
+  )
+}
+
+const SHOWN_AVATARS = 3
+
+/** Read-only: who else can open the project's server copy, matched by name as in ProjectDetails. */
+function SharedWith({ project: p }: { project: Project }) {
+  const { serverProjects } = useStore()
+  const serverProject = serverProjects.find((sp) => sp.name === (p.serverName ?? p.name))
+  if (!serverProject) return <span className="text-muted-foreground text-sm">Not connected to server</span>
+
+  const others = serverProject.access.filter((g) => g.principal.id !== ME_SERVER.id)
+  if (others.length === 0) return '—'
+  const shown = others.slice(0, SHOWN_AVATARS)
+  const more = others.length - shown.length
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span tabIndex={0} className="flex w-fit items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring" />}
+        aria-label={`Shared with ${others.map((g) => g.principal.name).join(', ')}`}
+      >
+        <span className="flex -space-x-1.5">
+          {shown.map((g) => (
+            <Avatar key={g.principal.id} className="ring-2 ring-background">
+              <AvatarFallback>{g.principal.initials}</AvatarFallback>
+            </Avatar>
+          ))}
+        </span>
+        {more > 0 && (
+          <Badge variant="outline" className="ml-1">
+            +{more}
+          </Badge>
+        )}
+      </TooltipTrigger>
+      <TooltipContent>
+        <ul className="flex flex-col gap-0.5">
+          {others.map((g) => (
+            <li key={g.principal.id}>
+              {g.principal.name} · {ROLE_LABEL[g.role]}
+            </li>
+          ))}
+        </ul>
+      </TooltipContent>
+    </Tooltip>
   )
 }
