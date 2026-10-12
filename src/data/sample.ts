@@ -8,7 +8,7 @@
 
 export type Person = { name: string; initials: string }
 
-export const ME: Person = { name: 'Sam Garcia', initials: 'SG' }
+export const ME: Person = { name: 'Dharhas Pothina', initials: 'DP' }
 export const ALEX: Person = { name: 'Alex Kim', initials: 'AK' }
 
 export type RequestedPackage = { name: string; constraint: string }

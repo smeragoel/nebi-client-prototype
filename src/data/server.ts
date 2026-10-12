@@ -27,7 +27,7 @@ export type Connection = {
   signedInAs: string
 }
 
-export const DEFAULT_CONNECTION: Connection = { url: 'nebi.openteams.ai', auth: 'token', signedInAs: 'sam@openteams.ai' }
+export const DEFAULT_CONNECTION: Connection = { url: 'nebi.openteams.ai', auth: 'token', signedInAs: 'dharhas@openteams.ai' }
 
 const user = (id: string, name: string, initials: string): Principal => ({
   kind: 'user', id, name, email: `${id}@openteams.ai`, initials,
@@ -36,11 +36,11 @@ const team = (name: string, members: number, initials: string): Principal => ({
   kind: 'team', id: name, name, members, initials,
 })
 
-export const SAM = user('sam', 'Sam Garcia', 'SG')
+export const ME_SERVER = user('dharhas', 'Dharhas Pothina', 'DP')
 
 /** Everyone who has signed in to the server, so can be shared with. Values from 2510:21781. */
 export const DIRECTORY: Principal[] = [
-  SAM,
+  ME_SERVER,
   user('alex', 'Alex Kim', 'AK'),
   user('jordan', 'Jordan Lee', 'JL'),
   user('joaquin', 'Joaquin Ruiz', 'JR'),
@@ -51,7 +51,7 @@ export const DIRECTORY: Principal[] = [
 ]
 
 const who = (id: string) => DIRECTORY.find((p) => p.id === id)!
-const owner: Grant = { principal: SAM, role: 'owner' }
+const owner: Grant = { principal: ME_SERVER, role: 'owner' }
 
 /**
  * The first four rows are the Figma list (2512:15552). The last three are the local sample

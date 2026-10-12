@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { toast } from '@/components/ui/toast'
-import { DIRECTORY, type Principal, principalDetail, ROLE_LABEL, type Role, SAM, type ServerProject } from '@/data/server'
+import { DIRECTORY, type Principal, principalDetail, ME_SERVER, ROLE_LABEL, type Role, type ServerProject } from '@/data/server'
 import { useStore } from '@/state/store'
 
 type GrantRole = Exclude<Role, 'owner'>
@@ -145,7 +145,7 @@ export function ShareDialog({
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-foreground text-sm">
                     {g.principal.name}
-                    {g.principal.id === SAM.id && ' (you)'}
+                    {g.principal.id === ME_SERVER.id && ' (you)'}
                   </span>
                   <span className="truncate text-muted-foreground text-sm">{principalDetail(g.principal)}</span>
                 </div>
