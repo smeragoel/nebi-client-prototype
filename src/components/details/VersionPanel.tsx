@@ -52,6 +52,8 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
                   Installed
                 </Badge>
               )}
+              {/* User test 9 Oct: a plain status chip, not a link. Where it's published is in the meta line. */}
+              {v.publications.length > 0 && <Badge variant="secondary">Published</Badge>}
             </div>
             <div className="flex items-start gap-2">
               <Tooltip>
@@ -65,13 +67,15 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
                   {serverOnly ? `Pull version ${v.number} first` : `Creates a new version based on version ${v.number}`}
                 </TooltipContent>
               </Tooltip>
-              <Button variant="outline" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
+              {/* User test 9 Oct: tertiary, so it doesn't read as another Push or Share. */}
+              <Button variant="ghost" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
                 <Upload />
-                Publish
+                Publish to registry
               </Button>
               <InstallAction project={project} version={v} serverOnly={serverOnly} />
             </div>
           </div>
+          <ReplacesNote project={project} version={v} serverOnly={serverOnly} />
           <VersionMeta project={project} version={v} serverOnly={serverOnly} />
         </div>
 
@@ -144,15 +148,11 @@ function VersionMeta({ project, version: v, serverOnly }: { project: Project; ve
         <>
           <Dot />
           {refs.length === 1 ? (
-            <span className="flex items-center gap-1.5">
-              <Upload className="size-3.5" aria-hidden />
-              Published to {refs[0]}
-            </span>
+            <span>Published to {refs[0]}</span>
           ) : (
             // More than one registry: a count, with the full list on hover.
             <Tooltip>
-              <TooltipTrigger render={<span className="flex items-center gap-1.5 underline decoration-dotted underline-offset-4" tabIndex={0} />}>
-                <Upload className="size-3.5" aria-hidden />
+              <TooltipTrigger render={<span className="underline decoration-dotted underline-offset-4" tabIndex={0} />}>
                 Published to {refs.length} registries
               </TooltipTrigger>
               <TooltipContent>{refs.join(', ')}</TooltipContent>
@@ -225,16 +225,25 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
           </Link>
         </span>
       )}
-      {other != null && (
-        <span className={UNDER_BUTTON}>
-          Replaces{' '}
-          <Link to={`?v=${other}`} replace className="underline underline-offset-4 hover:text-primary">
-            v{other}
-          </Link>{' '}
-          on disk
-        </span>
-      )}
     </div>
+  )
+}
+
+/**
+ * User test 9 Oct: under the header actions, one line saying an install replaces the installed version.
+ * Its own row, right-aligned, because the button column is too narrow to hold it on one line.
+ */
+function ReplacesNote({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
+  const other = project.installedVersion
+  if (serverOnly || other == null || other === v.number) return null
+  return (
+    <p className="self-end text-right text-muted-foreground-strong text-xs">
+      Installing v{v.number} replaces{' '}
+      <Link to={`?v=${other}`} replace className="underline underline-offset-4 hover:text-primary">
+        v{other}
+      </Link>{' '}
+      on this machine. Only one version is installed at a time.
+    </p>
   )
 }
 
