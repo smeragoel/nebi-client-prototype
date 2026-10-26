@@ -331,7 +331,7 @@ export function PackagesEditor({
 
 /**
  * Free-text chips with optional suggestions (Channels and Tags on Create new version, 2914:9164).
- * Enter adds what's typed. `invalid` returns an error for a chip, which then shows in red with
+ * Enter or Tab adds what's typed. `invalid` returns an error for a chip, which then shows in red with
  * the error under the field (the "2025-q3" state).
  */
 export function ChipsField({
@@ -390,7 +390,16 @@ export function ChipsField({
               ))
             }
           </ComboboxValue>
-          <ComboboxInput placeholder={placeholder} />
+          <ComboboxInput
+            placeholder={placeholder}
+            onKeyDown={(e) => {
+              // Dharhas, 14 Oct testing: Tab should save a tag, not only Enter. With nothing typed, Tab moves on.
+              if (e.key !== 'Tab' || e.shiftKey || !typed) return
+              e.preventDefault()
+              if (!value.includes(typed)) onChange([...value, typed])
+              setQuery('')
+            }}
+          />
         </ComboboxChips>
         {items.length > 0 && (
           <ComboboxContent>
