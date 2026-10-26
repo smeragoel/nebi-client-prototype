@@ -15,7 +15,6 @@ import { useStore } from '@/state/store'
 
 type Mode = 'gui' | 'toml'
 
-const CHANNEL_SUGGESTIONS = ['conda-forge', 'bioconda', 'pytorch', 'nvidia', 'defaults']
 const DESCRIPTION_SHOWN = 72
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -212,22 +211,14 @@ export default function CreateVersion() {
         <div className={PAGE_COLUMN}>
           {mode === 'gui' ? (
             <>
-              <FormSection id="environment" title="Environment" intro="The platforms and channels pixi solves this version for.">
+              {/* Channels are set only in the pixi.toml editor (2026-10-14); the base version's channels carry over. */}
+              <FormSection id="environment" title="Environment" intro="The platforms pixi solves this version for.">
                 <PlatformsField
                   machine={machine}
                   value={platforms}
                   onChange={setPlatforms}
                   error={platformsError}
                   description={`Starts with version ${base.number}’s platforms. For uncommon platforms, type pixi’s name (e.g. linux-ppc64le).`}
-                />
-                <ChipsField
-                  label="Channels"
-                  value={channels}
-                  onChange={setChannels}
-                  suggestions={CHANNEL_SUGGESTIONS}
-                  placeholder="Add a channel"
-                  description="conda-forge works for most projects."
-                  normalize={(s) => s.trim().toLowerCase()}
                 />
               </FormSection>
               <FormSection
