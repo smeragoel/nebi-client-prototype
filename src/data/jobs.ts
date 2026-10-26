@@ -137,7 +137,7 @@ export function sampleJobs(now = Date.now()): Job[] {
     {
       id: '4f0c9a61-2b7e-4d3a-9e55-0b8d1c7a2f13',
       type: 'install',
-      projectId: 'oci-registry',
+      projectId: 'project-1',
       status: 'queued',
       createdAt: now - 10_000,
       startedAt: null,
@@ -149,7 +149,7 @@ export function sampleJobs(now = Date.now()): Job[] {
       // 05c: Running. The last lines stream in while the page is open; the job itself stays running.
       id: 'b3e21d07-6c4f-4a9b-8f12-7d95e0c43a68',
       type: 'env_install',
-      projectId: 'oci-registry',
+      projectId: 'project-pulled-from-server',
       status: 'running',
       createdAt: now - 124_000 - 1500,
       startedAt: now - 124_000,
@@ -171,7 +171,7 @@ export function sampleJobs(now = Date.now()): Job[] {
       'Running: pixi install -v',
       ...sandboxFailLines,
     ], SANDBOX_INSTALL_ERROR),
-    done('2c58f1b9-8e04-47d1-b6a3-5f19c7e20d94', 'update', 'oci-registry', 'succeeded', 3 * HOUR, 72, [
+    done('2c58f1b9-8e04-47d1-b6a3-5f19c7e20d94', 'update', 'project-1', 'succeeded', 3 * HOUR, 72, [
       'Solving environment from current pixi.toml...',
       ...lockLines,
     ]),

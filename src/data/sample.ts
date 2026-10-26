@@ -102,7 +102,7 @@ export const INITIAL_PROJECTS: Project[] = [
     path: '/home/user/Project_1',
     versions: project1History(),
     serverOnly: [],
-    serverVersion: 7,
+    serverVersion: 6,
     installedVersion: 7,
     lastInstalledVersion: 7,
     size: '1.2 GB',
@@ -110,21 +110,18 @@ export const INITIAL_PROJECTS: Project[] = [
   },
   {
     id: 'project-pulled-from-server',
-    name: 'eval-pipeline',
-    path: '/home/user/eval-pipeline',
+    name: 'Project_pulled_from_server',
+    path: '/home/user/Project_pulled_from_server',
     versions: project1History()
       .slice(0, 2)
       .map((v, i) => ({ ...v, author: ALEX, tags: i === 1 ? ['stable'] : [], ageDays: 60 - i * 20 })),
     serverOnly: [
-      {
-        ...project1History()[2], author: ALEX, ageDays: 1, tags: ['latest'], publications: [],
-        description: 'Upgraded scikit-learn for the new metrics',
-      },
+      { ...project1History()[2], author: ALEX, ageDays: 1, tags: ['latest'], publications: [] },
     ],
     serverVersion: 3,
-    installedVersion: 2,
+    installedVersion: null,
     lastInstalledVersion: 2,
-    size: '960 MB',
+    size: null,
     remotes: ['ghcr.io/nebari-dev'],
   },
   {
