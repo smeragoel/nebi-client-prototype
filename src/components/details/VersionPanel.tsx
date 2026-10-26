@@ -376,7 +376,7 @@ function EnvironmentSpec({ project, version: v }: { project: Project; version: V
         <Tabs value={tab} onValueChange={(t) => setTab(t as typeof tab)}>
           <div className="flex items-end justify-between gap-2 border-border border-b pb-1.5">
             <TabsList variant="underline" className="border-0">
-              <TabsTab value="requested">Requested ({v.requested.length})</TabsTab>
+              <TabsTab value="requested">Specified ({v.requested.length})</TabsTab>
               <TabsTab value="resolved">Resolved ({resolved.length})</TabsTab>
               <TabsIndicator />
             </TabsList>
