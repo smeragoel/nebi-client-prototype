@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Laptop, Search, Server, Upload } from 'lucide-react'
+import { Check, ChevronDown, Laptop, PackageCheck, Search, Server } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { PersonAvatar } from '@/components/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,7 @@ import { useSyncMotion } from './useSyncMotion'
 /**
  * Left rail of project details. Rows follow the live `Version row` component 2931:11315, which the
  * 2026-09-28 consistency pass put in every project-details frame: line 1 is the number, then
- * Installed/Installing → tags → +N, with the sync marker and published icon on the right; line 2 is
+ * Installed/Installing → tags → +N, with the sync marker and the Published badge on the right; line 2 is
  * the author avatar and the description.
  */
 export function VersionRail({
@@ -264,10 +264,13 @@ function VersionRow({
         )}
         <span className="ml-auto flex items-center gap-2">
           {sync && <SyncLabel marker={sync} compact={compactSync} />}
+          {/* UX review `03` 3189:14168: a labelled badge, so the icon is never read alone (testers read the old
+              upload icon as an external link). PackageCheck ties it to the Registries icon. */}
           {published && (
             <Tooltip>
-              <TooltipTrigger render={<span className="text-muted-foreground-strong" />}>
-                <Upload className="size-3.5" aria-label="Published" />
+              <TooltipTrigger render={<Badge variant="secondary" />}>
+                <PackageCheck />
+                Published
               </TooltipTrigger>
               <TooltipContent>
                 Published to {v.publications.map((p) => `${p.registry}/${p.repository}:${p.tag}`).join(', ')}

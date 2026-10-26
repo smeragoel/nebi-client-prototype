@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageX, Plus, RotateCw, Search, Server, SquareArrowUp, TriangleAlert, Upload, X } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageCheck, PackageX, Plus, RotateCw, Search, Server, SquareArrowUp, TriangleAlert, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
@@ -46,6 +46,13 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
                   {t}
                 </Badge>
               ))}
+              {/* UX review `03` 3189:14168: the rail's Published badge, after the tags. */}
+              {v.publications.length > 0 && (
+                <Badge variant="secondary">
+                  <PackageCheck />
+                  Published
+                </Badge>
+              )}
               {installed && (
                 <Badge className="border-transparent bg-success text-success-foreground">
                   <Check />
@@ -147,14 +154,14 @@ function VersionMeta({ project, version: v, serverOnly }: { project: Project; ve
           <Dot />
           {refs.length === 1 ? (
             <span className="flex items-center gap-1.5">
-              <Upload className="size-3.5" aria-hidden />
+              <PackageCheck className="size-3.5" aria-hidden />
               Published to {refs[0]}
             </span>
           ) : (
             // More than one registry: a count, with the full list on hover.
             <Tooltip>
               <TooltipTrigger render={<span className="flex items-center gap-1.5 underline decoration-dotted underline-offset-4" tabIndex={0} />}>
-                <Upload className="size-3.5" aria-hidden />
+                <PackageCheck className="size-3.5" aria-hidden />
                 Published to {refs.length} registries
               </TooltipTrigger>
               <TooltipContent>{refs.join(', ')}</TooltipContent>
