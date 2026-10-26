@@ -247,7 +247,7 @@ function ReplacesNote({ project, version: v, serverOnly }: { project: Project; v
   )
 }
 
-/** Shows while this version installs, then stays ~5s once it's done and dismisses itself. */
+/** Shows while this version installs, then stays ~10s once it's done and dismisses itself. */
 function InstallAlert({ project, version: v }: { project: Project; version: Version }) {
   const { installing, installDone, dismissInstallDone } = useStore()
   if (installing?.projectId === project.id && installing.version === v.number) {

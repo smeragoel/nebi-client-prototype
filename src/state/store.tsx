@@ -79,8 +79,8 @@ const PULL_MS = 1600
 const SYNC_MS = 900
 /** How often a running job's next log line streams in. */
 const LOG_LINE_MS = 900
-/** How long the finished install alert stays before it dismisses itself. */
-const INSTALL_DONE_MS = 5000
+/** How long the finished install alert stays before it dismisses itself. Was 5s (2026-09-28); testers found that too fast. */
+const INSTALL_DONE_MS = 10_000
 /** Where Nebi puts a project when Path is left blank (GetWorkspacePath: app data + name). */
 const DEFAULT_PROJECTS_DIR = '/home/user/.local/share/nebi/projects'
 /** The project whose install always fails, for the "find out why an install failed" test task. */
