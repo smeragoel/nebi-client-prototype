@@ -21,7 +21,6 @@ const DEFAULT_CHANNELS = ['conda-forge']
 const DEFAULT_PACKAGES: RequestedPackage[] = [{ name: 'python', constraint: '>=3.11' }]
 const DEFAULT_TAGS = ['latest']
 const DEFAULT_DESCRIPTION = 'Initial project creation'
-const DESCRIPTION_SHOWN = 72
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 /**
@@ -47,14 +46,13 @@ export default function CreateProject() {
   const blankToml = (n: string) => draftToToml({ name: n, channels: DEFAULT_CHANNELS, platforms: [machine], requested: DEFAULT_PACKAGES })
   const [toml, setToml] = useState(() => blankToml(''))
   const [tags, setTags] = useState(DEFAULT_TAGS)
-  const [description, setDescription] = useState(DEFAULT_DESCRIPTION)
+  const [description, setDescription] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [leavingTo, setLeavingTo] = useState<string | null>(null)
   // Set on a successful Create. Navigation runs as a transition, so without this the form would
   // flash "already exists" for its own new project before the details page replaces it.
   const [created, setCreated] = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
-  const descriptionRef = useRef<HTMLInputElement>(null)
 
   /* ---------------- validation ---------------- */
 
@@ -70,7 +68,6 @@ export default function CreateProject() {
         ? 'Use letters, numbers, hyphens, underscores or dots.'
         : null
   const platformsError = mode === 'gui' && submitted && platforms.length === 0 ? 'Add at least one platform.' : null
-  const descriptionError = submitted && !description.trim() ? 'Enter a description.' : null
   const tagsInvalid = tags.some((t) => tagError(t))
   const parsed = useMemo(() => parseToml(toml), [toml])
   const tomlError =
@@ -89,7 +86,7 @@ export default function CreateProject() {
     (!!trimmed ||
       !!path.trim() ||
       !same(tags, DEFAULT_TAGS) ||
-      description !== DEFAULT_DESCRIPTION ||
+      !!description.trim() ||
       (mode === 'gui'
         ? !same(platforms, [machine]) || !same(requested, DEFAULT_PACKAGES)
         : toml.trim() !== blankToml(name).trim()))
@@ -138,9 +135,8 @@ export default function CreateProject() {
     setSubmitted(true)
     const tomlInvalid = mode === 'toml' && (!parsed.hasWorkspace || parsed.draft.platforms.length === 0)
     const guiInvalid = mode === 'gui' && platforms.length === 0
-    if (!trimmed || nameError || tomlInvalid || guiInvalid || !description.trim() || tagsInvalid) {
+    if (!trimmed || nameError || tomlInvalid || guiInvalid || tagsInvalid) {
       if (!trimmed || nameError) nameRef.current?.focus()
-      else if (!description.trim()) descriptionRef.current?.focus()
       return
     }
     const env =
@@ -152,7 +148,7 @@ export default function CreateProject() {
             requested: parsed.draft.requested,
           }
     setCreated(true)
-    const id = create({ name: trimmed, ...env, path: path.trim(), tags, description: description.trim() }, andInstall)
+    const id = create({ name: trimmed, ...env, path: path.trim(), tags, description: description.trim() || DEFAULT_DESCRIPTION }, andInstall)
     navigate(`/projects/${id}?v=1`, { replace: true })
   }
 
@@ -265,17 +261,9 @@ export default function CreateProject() {
           )}
 
           <FormSection id="about" title="About version 1" intro="Shown in the version list and on the version’s page.">
-            <FormField
-              label="Description"
-              error={descriptionError}
-              description={`Required. The first ${DESCRIPTION_SHOWN} characters show in the version list.`}
-            >
-              <Input
-                ref={descriptionRef}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                autoComplete="off"
-              />
+            {/* UX review 04 (3201:14825): the default is the placeholder, and a blank field saves it. */}
+            <FormField label="Description" description="Leave blank to use the suggestion.">
+              <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={DEFAULT_DESCRIPTION} autoComplete="off" />
             </FormField>
             <ChipsField
               label="Tags (optional)"

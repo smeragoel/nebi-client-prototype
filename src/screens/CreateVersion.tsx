@@ -15,7 +15,6 @@ import { useStore } from '@/state/store'
 
 type Mode = 'gui' | 'toml'
 
-const DESCRIPTION_SHOWN = 72
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -60,6 +59,8 @@ export default function CreateVersion() {
 
   const summary = base ? changeSummary(base.requested, env.requested) : []
   const suggestion = summary.length ? capitalise(summary.join(', ')) : null
+  // UX review 04 (3201:14619): the suggestion is the placeholder, and a blank field saves it.
+  const finalDescription = description.trim() || suggestion || ''
 
   const dirty =
     !created &&
@@ -92,7 +93,7 @@ export default function CreateVersion() {
   const back = `/projects/${project.id}?v=${base.number}`
   const leave = (to: string) => (dirty ? setLeavingTo(to) : navigate(to))
 
-  const descriptionError = submitted && !description.trim() ? 'Enter a description.' : null
+  const descriptionError = submitted && !finalDescription ? 'Enter a description.' : null
   const platformsError = mode === 'gui' && submitted && platforms.length === 0 ? 'Add at least one platform.' : null
   const tomlError =
     mode !== 'toml' || !submitted
@@ -140,8 +141,8 @@ export default function CreateVersion() {
     setSubmitted(true)
     const tomlInvalid = mode === 'toml' && (!parsed.hasWorkspace || parsed.draft.platforms.length === 0)
     const guiInvalid = mode === 'gui' && platforms.length === 0
-    if (!description.trim() || tomlInvalid || guiInvalid || tagsInvalid) {
-      if (!description.trim()) descriptionRef.current?.focus()
+    if (!finalDescription || tomlInvalid || guiInvalid || tagsInvalid) {
+      if (!finalDescription) descriptionRef.current?.focus()
       return
     }
     setCreated(true)
@@ -153,7 +154,7 @@ export default function CreateVersion() {
         channels: env.channels.length ? env.channels : base.channels,
         requested: env.requested,
         tags,
-        description: description.trim(),
+        description: finalDescription,
       },
       andInstall,
     )
@@ -261,29 +262,19 @@ export default function CreateVersion() {
               description="A tag stays with this version until a newer version uses the same tag. latest does this automatically."
               invalid={tagError}
             />
-            <div className="flex flex-col gap-3">
-              <FormField
-                label="Description"
-                error={descriptionError}
-                description={`Required. The first ${DESCRIPTION_SHOWN} characters show in the version list.`}
-              >
-                <Input
-                  ref={descriptionRef}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g., Swapped tensorflow for scikit-learn"
-                  autoComplete="off"
-                />
-              </FormField>
-              {suggestion && description !== suggestion && (
-                <p className="flex items-center gap-2 text-muted-foreground-strong text-sm">
-                  Suggested from your changes:
-                  <Button type="button" variant="link" size="xs" className="h-auto px-0" onClick={() => setDescription(suggestion)}>
-                    {suggestion}
-                  </Button>
-                </p>
-              )}
-            </div>
+            <FormField
+              label="Description"
+              error={descriptionError}
+              description={suggestion ? 'Leave blank to use the suggestion.' : 'Required.'}
+            >
+              <Input
+                ref={descriptionRef}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={suggestion ?? 'e.g., Swapped tensorflow for scikit-learn'}
+                autoComplete="off"
+              />
+            </FormField>
           </FormSection>
         </div>
 
