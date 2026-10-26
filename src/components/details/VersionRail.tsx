@@ -32,8 +32,12 @@ function groupByTime(versions: RailVersion[]) {
  * the author avatar and the description.
  *
  * Collapsible (UX review `01 Collapsible versions rail` 3180:13507, for review, not live): the toggle leads
- * the header (3170:12988); collapsed, the rail is a 32px strip (3170:13707) with the toggle, a tile per sync
- * notice and a tile per version, grouped by time. Expanded, it's 374px (UX review `03` 3189:14168).
+ * the header (3170:12988); collapsed, the rail is a 32px strip (3170:13707) with the toggle and a tile per
+ * version, grouped by time. Expanded, it's 374px (UX review `03` 3189:14168).
+ *
+ * No sync notices ("N versions not on the server yet · Push", "Server is N versions ahead · Pull"): removed
+ * in the Nat / Smera review, 2026-10-26. Each version's sync marker says where it lives, and a version's
+ * own toolbar pushes or pulls it.
  */
 export function VersionRail({
   project,
@@ -44,7 +48,6 @@ export function VersionRail({
   selected: number
   onSelect: (n: number) => void
 }) {
-  const { push, pull, pushing } = useStore()
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState(false)
   const listRef = useRef<HTMLElement>(null)
@@ -61,17 +64,10 @@ export function VersionRail({
     return groupByTime(railVersions(project).filter(matches))
   }, [project, query])
 
-  const ahead = project.serverVersion != null ? newestLocal(project) - project.serverVersion : 0
-  const behind = project.serverOnly.length
-  // A collapsing notice keeps its last wording ("1 version…") instead of flashing "0 versions".
-  const [shownAhead, setShownAhead] = useState(ahead)
-  if (ahead > 0 && ahead !== shownAhead) setShownAhead(ahead)
-  const newestOnServer = project.serverOnly.at(-1)?.number
-  const [shownBehind, setShownBehind] = useState({ count: behind, version: newestOnServer })
-  if (behind > 0 && (behind !== shownBehind.count || newestOnServer !== shownBehind.version)) {
-    setShownBehind({ count: behind, version: newestOnServer })
-  }
-  useSyncMotion(listRef, project.serverVersion != null && project.serverVersion === newestLocal(project) && behind === 0)
+  useSyncMotion(
+    listRef,
+    project.serverVersion != null && project.serverVersion === newestLocal(project) && project.serverOnly.length === 0,
+  )
 
   // The rail scrolls on its own; bring the selected row into view when the page opens on it, and when
   // the rail expands or collapses. Other selections are clicks on rows already in view.
@@ -117,10 +113,7 @@ export function VersionRail({
           project={project}
           selected={selected}
           onSelect={onSelect}
-          onExpand={() => toggle(false)}
           toggle={toggleButton}
-          ahead={ahead}
-          behind={behind}
           listRef={listRef}
         />
       </aside>
@@ -129,7 +122,7 @@ export function VersionRail({
 
   return (
     <aside className={cn(RAIL, 'w-[374px]')} aria-label="Versions">
-      {/* Heading, notices and search stay put; only the version list scrolls. Fixed width, so the content is
+      {/* Heading and search stay put; only the version list scrolls. Fixed width, so the content is
           clipped while the rail opens instead of reflowing. */}
       <div className="flex w-[374px] flex-col">
         {/* 3170:12988: Compare versions moved to the version toolbar, so the hide toggle takes its place. */}
@@ -137,38 +130,6 @@ export function VersionRail({
           <h2 className="font-semibold text-base text-foreground leading-5">Versions</h2>
           {toggleButton}
         </div>
-
-        <Collapse open={ahead > 0}>
-          <Notice
-            icon={<Laptop />}
-            action={
-              <Button
-                variant="outline"
-                size="xs"
-                loading={pushing?.projectId === project.id && pushing.upTo == null}
-                disabled={pushing != null && pushing.upTo != null}
-                loadingText="Pushing…"
-                onClick={() => push(project.id)}
-              >
-                Push
-              </Button>
-            }
-          >
-            {shownAhead} {shownAhead === 1 ? 'version' : 'versions'} not on the server yet
-          </Notice>
-        </Collapse>
-        <Collapse open={behind > 0}>
-          <Notice
-            icon={<Server />}
-            action={
-              <Button variant="outline" size="xs" onClick={() => pull(project.id)}>
-                Pull version {shownBehind.version}
-              </Button>
-            }
-          >
-            Server is {shownBehind.count} {shownBehind.count === 1 ? 'version' : 'versions'} ahead
-          </Notice>
-        </Collapse>
 
         <div className="mt-3 flex items-center gap-2">
           <div className="relative flex-1">
@@ -221,43 +182,27 @@ const RAIL = cn(
 )
 
 /**
- * The collapsed rail (3170:13707): the toggle, a sync tile (`Sync tile` 3177:13502) per notice that would
- * show, then version tiles (`Version tile` 3174:13520) in time groups, 4px apart in a group and 12px between
- * groups. Search and tags only show in the expanded rail.
+ * The collapsed rail (3170:13707): the toggle, then version tiles (`Version tile` 3174:13520) in time groups,
+ * 4px apart in a group and 12px between groups. Search and tags only show in the expanded rail.
  */
 function CollapsedStrip({
   project,
   selected,
   onSelect,
-  onExpand,
   toggle,
-  ahead,
-  behind,
   listRef,
 }: {
   project: Project
   selected: number
   onSelect: (n: number) => void
-  onExpand: () => void
   toggle: ReactNode
-  ahead: number
-  behind: number
   listRef: React.RefObject<HTMLElement | null>
 }) {
   const groups = useMemo(() => groupByTime(railVersions(project)), [project])
-  const aheadText = `${ahead} ${ahead === 1 ? 'version' : 'versions'} not on the server yet`
-  const behindText = `Server is ${behind} ${behind === 1 ? 'version' : 'versions'} ahead`
 
   return (
     <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-3">
       {toggle}
-      {/* A click expands the rail, so Push / Pull never runs from a 32px tile. */}
-      {(ahead > 0 || behind > 0) && (
-        <div className="flex flex-col gap-1">
-          {ahead > 0 && <SyncTile icon={<Laptop />} label={aheadText} onClick={onExpand} />}
-          {behind > 0 && <SyncTile icon={<Server />} label={behindText} onClick={onExpand} />}
-        </div>
-      )}
       <nav ref={listRef} aria-label="Version history" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-9">
         {groups.map((g) => (
           <ul key={g.label} aria-label={g.label} className="flex flex-col gap-1">
@@ -277,26 +222,6 @@ const TILE = cn(
   'flex size-8 items-center justify-center rounded-md border border-transparent outline-none',
   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
 )
-
-function SyncTile({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            aria-label={`${label}. Show versions`}
-            onClick={onClick}
-            className={cn(TILE, 'bg-info text-info-foreground [&_svg]:size-4')}
-          />
-        }
-      >
-        {icon}
-      </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  )
-}
 
 /** States follow the expanded `Version row`: card at rest, muted on hover, muted + border when selected. A click selects without expanding. */
 function VersionTile({ version: v, selected, onSelect }: { version: RailVersion; selected: boolean; onSelect: () => void }) {
@@ -323,35 +248,6 @@ function VersionTile({ version: v, selected, onSelect }: { version: RailVersion;
       </TooltipTrigger>
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
-  )
-}
-
-/** Height-collapsing wrapper for the rail notices ("The notice collapses", 2925:25499). */
-function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
-  return (
-    <div
-      inert={!open}
-      className={cn(
-        'grid motion-safe:transition-[grid-template-rows,opacity] motion-safe:duration-[240ms] motion-safe:ease-out',
-        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-      )}
-    >
-      <div className="min-h-0 overflow-hidden">
-        <div className="pt-3">{children}</div>
-      </div>
-    </div>
-  )
-}
-
-function Notice({ icon, action, children }: { icon: ReactNode; action: ReactNode; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-md bg-info py-2 pr-2 pl-3 text-info-foreground text-sm">
-      <span className="flex items-center gap-2 [&_svg]:size-3.5 [&_svg]:shrink-0">
-        {icon}
-        {children}
-      </span>
-      {action}
-    </div>
   )
 }
 
