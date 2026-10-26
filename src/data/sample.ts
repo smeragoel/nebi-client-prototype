@@ -143,9 +143,9 @@ export const INITIAL_PROJECTS: Project[] = [
     versions: [{ ...project1History()[0], ageDays: 9, tags: ['latest'] }],
     serverOnly: [],
     serverVersion: null,
-    installedVersion: null,
+    installedVersion: 1,
     lastInstalledVersion: 1,
-    size: null,
+    size: '233.4 MB',
     remotes: ['quay.io/reiemp'],
   },
 ]
