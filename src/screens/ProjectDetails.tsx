@@ -1,10 +1,8 @@
 import { Copy, Share2 } from 'lucide-react'
-import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { VersionPanel } from '@/components/details/VersionPanel'
 import { VersionRail } from '@/components/details/VersionRail'
 import { railVersions } from '@/components/details/sync'
-import { ShareDialog } from '@/components/server/ShareDialog'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/toast'
@@ -17,9 +15,8 @@ import { notBuilt, useStore } from '@/state/store'
  */
 export default function ProjectDetails() {
   const { id } = useParams()
-  const { projects, serverProjects } = useStore()
+  const { projects } = useStore()
   const [params, setParams] = useSearchParams()
-  const [sharing, setSharing] = useState(false)
   const project = projects.find((p) => p.id === id)
 
   if (!project) {
@@ -32,9 +29,6 @@ export default function ProjectDetails() {
       </main>
     )
   }
-
-  // Access lives on the server copy, matched by name as on the Server screen.
-  const serverProject = serverProjects.find((sp) => sp.name === (project.serverName ?? project.name))
 
   const all = railVersions(project)
   // Default: the installed version, else the newest one on this machine.
@@ -68,7 +62,7 @@ export default function ProjectDetails() {
         </Breadcrumb>
         <div className="flex items-center justify-between gap-4">
           <h1 className="font-bold text-3xl text-foreground">{project.name}</h1>
-          <Button variant="secondary" size="sm" onClick={() => (serverProject ? setSharing(true) : notBuilt('Share'))}>
+          <Button variant="secondary" size="sm" onClick={() => notBuilt('Share')}>
             <Share2 />
             Share
           </Button>
@@ -96,8 +90,6 @@ export default function ProjectDetails() {
           <VersionPanel project={project} version={selected} serverOnly={selected.serverOnly} />
         </div>
       </div>
-
-      {serverProject && <ShareDialog project={serverProject} open={sharing} onOpenChange={setSharing} />}
     </main>
   )
 }
