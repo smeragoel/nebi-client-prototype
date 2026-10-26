@@ -300,21 +300,12 @@ export function PackagesEditor({
         </TableHeader>
         <TableBody>
           {requested.map((p) => (
-            <TableRow key={p.name}>
-              <TableCell className="h-10 py-2">{p.name}</TableCell>
-              <TableCell className="h-10 py-2">{p.constraint}</TableCell>
-              <TableCell className="h-10 py-1 text-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Remove ${p.name}`}
-                  onClick={() => onChange(requested.filter((r) => r.name !== p.name))}
-                >
-                  <Trash2 />
-                </Button>
-              </TableCell>
-            </TableRow>
+            <PackageRow
+              key={p.name}
+              pkg={p}
+              onChange={(constraint) => onChange(requested.map((r) => (r.name === p.name ? { ...r, constraint } : r)))}
+              onRemove={() => onChange(requested.filter((r) => r.name !== p.name))}
+            />
           ))}
           {requested.length === 0 && (
             <TableRow>
@@ -326,6 +317,84 @@ export function PackagesEditor({
         </TableBody>
       </Table>
     </div>
+  )
+}
+
+/** Splits a stored match spec into the row's operator and version. A bare version ("3.11.*") means exactly. */
+function splitConstraint(constraint: string): [VersionOperator, string] {
+  if (constraint === '*' || !constraint) return ['>=', '']
+  const op = VERSION_OPERATORS.find(([o]) => constraint.startsWith(o))?.[0]
+  return op ? [op, constraint.slice(op.length)] : ['==', constraint]
+}
+
+/**
+ * UX review `05` option A (3236:15319, chosen by Smera 2026-10-26): every row's constraint is editable in place,
+ * an operator select and a version input, so changing a version no longer means delete and re-add (Johnny, testing).
+ * The name stays text. The version saves on blur or Enter; blank means any version.
+ */
+function PackageRow({
+  pkg,
+  onChange,
+  onRemove,
+}: {
+  pkg: RequestedPackage
+  onChange: (constraint: string) => void
+  onRemove: () => void
+}) {
+  const [operator, version] = splitConstraint(pkg.constraint)
+  const [draft, setDraft] = useState(version)
+  const build = (op: VersionOperator, v: string) => {
+    const t = v.trim()
+    return !t ? '*' : /^[<>=!~]/.test(t) ? t : `${op}${t}`
+  }
+  const commit = () => {
+    const next = build(operator, draft)
+    if (next !== pkg.constraint) onChange(next)
+    setDraft(splitConstraint(next)[1])
+  }
+
+  return (
+    <TableRow>
+      <TableCell className="h-10 py-2">{pkg.name}</TableCell>
+      <TableCell className="h-10 py-1">
+        <div className="flex max-w-[336px] items-center gap-2">
+          <Select value={operator} onValueChange={(v) => v && onChange(build(v as VersionOperator, draft))}>
+            <SelectTrigger className="w-20 shrink-0" aria-label={`Version operator for ${pkg.name}`}>
+              <SelectValue>{(v: VersionOperator) => v}</SelectValue>
+            </SelectTrigger>
+            <SelectContent align="start" className="min-w-48">
+              {VERSION_OPERATORS.map(([op, meaning]) => (
+                <SelectItem key={op} value={op}>
+                  <span className="w-6 shrink-0 font-mono">{op}</span>
+                  <span className="text-muted-foreground">{meaning}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commit()
+              }
+            }}
+            placeholder="any"
+            aria-label={`Version for ${pkg.name}`}
+            autoComplete="off"
+            spellCheck={false}
+            className="min-w-0 flex-1"
+          />
+        </div>
+      </TableCell>
+      <TableCell className="h-10 py-1 text-center">
+        <Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove ${pkg.name}`} onClick={onRemove}>
+          <Trash2 />
+        </Button>
+      </TableCell>
+    </TableRow>
   )
 }
 
