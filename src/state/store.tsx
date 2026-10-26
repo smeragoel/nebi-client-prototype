@@ -25,7 +25,7 @@ type Store = {
   projects: Project[]
   installing: Installing | null
   /** The install that just finished. Project details keeps its alert up for a few seconds, then drops it (2026-09-28 sync). */
-  installDone: { projectId: string; version: number } | null
+  installDone: { projectId: string; version: number; jobId: string } | null
   dismissInstallDone: () => void
   /** The push that's running. `upTo` is null for a push of everything (the rail's Push). */
   pushing: Pushing | null
@@ -213,7 +213,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             size: SIZE_AFTER_INSTALL[projectId] ?? estimateSize(find(projectId), version),
           }))
           if (opts?.toast === false) {
-            setInstallDone({ projectId, version })
+            setInstallDone({ projectId, version, jobId })
             timers.current.push(window.setTimeout(() => setInstallDone(null), INSTALL_DONE_MS))
           } else {
             toast.add({ title: `Version ${version} installed`, description: 'Ready to use on this machine.', type: 'success' })

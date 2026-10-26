@@ -250,6 +250,7 @@ function ReplacesNote({ project, version: v, serverOnly }: { project: Project; v
 /** Shows while this version installs, then stays ~10s once it's done and dismisses itself. */
 function InstallAlert({ project, version: v }: { project: Project; version: Version }) {
   const { installing, installDone, dismissInstallDone } = useStore()
+  const navigate = useNavigate()
   if (installing?.projectId === project.id && installing.version === v.number) {
     return <InstallingStrip version={v} step={installing.step} jobId={installing.jobId} />
   }
@@ -260,9 +261,15 @@ function InstallAlert({ project, version: v }: { project: Project; version: Vers
         <CircleCheck className="size-4" aria-hidden />
         Version {v.number} installed · ready to use on this machine
       </span>
-      <Button variant="ghost" size="icon-sm" className="text-success-foreground" onClick={dismissInstallDone} aria-label="Dismiss">
-        <X />
-      </Button>
+      {/* User test 7 Oct: View log went away the moment the install finished. */}
+      <span className="flex items-center gap-2">
+        <Button variant="link" size="xs" className="text-success-foreground" onClick={() => navigate(`/jobs/${installDone.jobId}`)}>
+          View log
+        </Button>
+        <Button variant="ghost" size="icon-sm" className="text-success-foreground" onClick={dismissInstallDone} aria-label="Dismiss">
+          <X />
+        </Button>
+      </span>
     </div>
   )
 }
