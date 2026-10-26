@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Laptop, PackageCheck, Search, Server } from 'lucide-react'
+import { Check, ChevronDown, Laptop, PackageCheck, PanelLeftClose, PanelLeftOpen, Search, Server } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { PersonAvatar } from '@/components/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -12,11 +12,28 @@ import { notBuilt, useStore } from '@/state/store'
 import { newestLocal, railVersions, type SyncMarker, syncMarker } from './sync'
 import { useSyncMotion } from './useSyncMotion'
 
+type RailVersion = ReturnType<typeof railVersions>[number]
+
+/** Rail versions under their time-group labels (Today, This week, …), newest first. */
+function groupByTime(versions: RailVersion[]) {
+  const out: { label: string; versions: RailVersion[] }[] = []
+  for (const v of versions) {
+    const label = timeGroup(v.ageDays)
+    if (out.at(-1)?.label !== label) out.push({ label, versions: [] })
+    out.at(-1)?.versions.push(v)
+  }
+  return out
+}
+
 /**
  * Left rail of project details. Rows follow the live `Version row` component 2931:11315, which the
  * 2026-09-28 consistency pass put in every project-details frame: line 1 is the number, then
  * Installed/Installing → tags → +N, with the sync marker and the Published badge on the right; line 2 is
  * the author avatar and the description.
+ *
+ * Collapsible (UX review `01 Collapsible versions rail` 3180:13507, for review, not live): the toggle leads
+ * the header (3170:12988); collapsed, the rail is a 32px strip (3170:13707) with the toggle, a tile per sync
+ * notice and a tile per version, grouped by time. Expanded, it's 374px (UX review `03` 3189:14168).
  */
 export function VersionRail({
   project,
@@ -29,7 +46,9 @@ export function VersionRail({
 }) {
   const { push, pull, pushing } = useStore()
   const [query, setQuery] = useState('')
+  const [collapsed, setCollapsed] = useState(false)
   const listRef = useRef<HTMLElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase().replace(/^v(?=\d)/, '')
@@ -39,13 +58,7 @@ export function VersionRail({
       v.description.toLowerCase().includes(q) ||
       v.author.name.toLowerCase().includes(q) ||
       v.tags.some((t) => t.toLowerCase().includes(q))
-    const out: { label: string; versions: ReturnType<typeof railVersions> }[] = []
-    for (const v of railVersions(project).filter(matches)) {
-      const label = timeGroup(v.ageDays)
-      if (out.at(-1)?.label !== label) out.push({ label, versions: [] })
-      out.at(-1)?.versions.push(v)
-    }
-    return out
+    return groupByTime(railVersions(project).filter(matches))
   }, [project, query])
 
   const ahead = project.serverVersion != null ? newestLocal(project) - project.serverVersion : 0
@@ -60,18 +73,70 @@ export function VersionRail({
   }
   useSyncMotion(listRef, project.serverVersion != null && project.serverVersion === newestLocal(project) && behind === 0)
 
-  // The rail scrolls on its own; bring the selected row into view when the page opens on it.
-  // Only on first render: later selections are clicks on rows already in view.
+  // The rail scrolls on its own; bring the selected row into view when the page opens on it, and when
+  // the rail expands or collapses. Other selections are clicks on rows already in view.
   useEffect(() => {
     listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' })
-  }, [])
+  }, [collapsed])
+
+  // The toggle moves between the header and the strip, so focus follows it across the swap.
+  const toggled = useRef(false)
+  useEffect(() => {
+    if (toggled.current) toggleRef.current?.focus()
+  }, [collapsed])
+  const toggle = (next: boolean) => {
+    toggled.current = true
+    setCollapsed(next)
+  }
+
+  const toggleLabel = collapsed ? 'Show versions' : 'Hide versions'
+  const toggleButton = (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            ref={toggleRef}
+            variant="ghost"
+            size="icon-sm"
+            aria-label={toggleLabel}
+            aria-expanded={!collapsed}
+            onClick={() => toggle(!collapsed)}
+          />
+        }
+      >
+        {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+      </TooltipTrigger>
+      <TooltipContent side={collapsed ? 'right' : 'top'}>{toggleLabel}</TooltipContent>
+    </Tooltip>
+  )
+
+  if (collapsed) {
+    return (
+      <aside className={cn(RAIL, 'w-8')} aria-label="Versions">
+        <CollapsedStrip
+          project={project}
+          selected={selected}
+          onSelect={onSelect}
+          onExpand={() => toggle(false)}
+          toggle={toggleButton}
+          ahead={ahead}
+          behind={behind}
+          listRef={listRef}
+        />
+      </aside>
+    )
+  }
 
   return (
-    <aside className="flex min-h-0 w-[300px] shrink-0 flex-col gap-3" aria-label="Versions">
-      {/* Heading, notices and search stay put; only the version list scrolls. */}
-      <div className="flex flex-col">
+    <aside className={cn(RAIL, 'w-[374px]')} aria-label="Versions">
+      {/* Heading, notices and search stay put; only the version list scrolls. Fixed width, so the content is
+          clipped while the rail opens instead of reflowing. */}
+      <div className="flex w-[374px] flex-col">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-base text-foreground leading-5">Versions</h2>
+          <div className="flex items-center gap-1.5">
+            {toggleButton}
+            <h2 className="font-semibold text-base text-foreground leading-5">Versions</h2>
+          </div>
           <Button variant="outline" size="sm" onClick={() => notBuilt('Compare versions')}>
             Compare versions
           </Button>
@@ -128,7 +193,7 @@ export function VersionRail({
         </div>
       </div>
 
-      <nav ref={listRef} aria-label="Version history" className="-mx-1 flex min-h-0 flex-1 flex-col overflow-y-auto px-1 pb-9">
+      <nav ref={listRef} aria-label="Version history" className="-mx-1 flex min-h-0 w-[382px] flex-1 flex-col overflow-y-auto px-1 pb-9">
         {groups.map((g) => (
           <section key={g.label} className="flex flex-col">
             <h3 className="mt-4 mb-1.5 font-medium text-muted-foreground text-xs leading-4 first:mt-1">{g.label}</h3>
@@ -150,6 +215,118 @@ export function VersionRail({
         {groups.length === 0 && <p className="px-3 py-6 text-muted-foreground text-sm">No versions match “{query}”.</p>}
       </nav>
     </aside>
+  )
+}
+
+/** Both widths animate over 200ms ease-out; instant with reduced motion. */
+const RAIL = cn(
+  'flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden',
+  'motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-out',
+)
+
+/**
+ * The collapsed rail (3170:13707): the toggle, a sync tile (`Sync tile` 3177:13502) per notice that would
+ * show, then version tiles (`Version tile` 3174:13520) in time groups, 4px apart in a group and 12px between
+ * groups. Search, tags and Compare versions only show in the expanded rail.
+ */
+function CollapsedStrip({
+  project,
+  selected,
+  onSelect,
+  onExpand,
+  toggle,
+  ahead,
+  behind,
+  listRef,
+}: {
+  project: Project
+  selected: number
+  onSelect: (n: number) => void
+  onExpand: () => void
+  toggle: ReactNode
+  ahead: number
+  behind: number
+  listRef: React.RefObject<HTMLElement | null>
+}) {
+  const groups = useMemo(() => groupByTime(railVersions(project)), [project])
+  const aheadText = `${ahead} ${ahead === 1 ? 'version' : 'versions'} not on the server yet`
+  const behindText = `Server is ${behind} ${behind === 1 ? 'version' : 'versions'} ahead`
+
+  return (
+    <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-3">
+      {toggle}
+      {/* A click expands the rail, so Push / Pull never runs from a 32px tile. */}
+      {(ahead > 0 || behind > 0) && (
+        <div className="flex flex-col gap-1">
+          {ahead > 0 && <SyncTile icon={<Laptop />} label={aheadText} onClick={onExpand} />}
+          {behind > 0 && <SyncTile icon={<Server />} label={behindText} onClick={onExpand} />}
+        </div>
+      )}
+      <nav ref={listRef} aria-label="Version history" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-9">
+        {groups.map((g) => (
+          <ul key={g.label} aria-label={g.label} className="flex flex-col gap-1">
+            {g.versions.map((v) => (
+              <li key={v.number}>
+                <VersionTile version={v} selected={v.number === selected} onSelect={() => onSelect(v.number)} />
+              </li>
+            ))}
+          </ul>
+        ))}
+      </nav>
+    </div>
+  )
+}
+
+const TILE = cn(
+  'flex size-8 items-center justify-center rounded-md border border-transparent outline-none',
+  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+)
+
+function SyncTile({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label={`${label}. Show versions`}
+            onClick={onClick}
+            className={cn(TILE, 'bg-info text-info-foreground [&_svg]:size-4')}
+          />
+        }
+      >
+        {icon}
+      </TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** States follow the expanded `Version row`: card at rest, muted on hover, muted + border when selected. A click selects without expanding. */
+function VersionTile({ version: v, selected, onSelect }: { version: RailVersion; selected: boolean; onSelect: () => void }) {
+  const label = `Version ${v.number} · ${v.description}`
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label={label}
+            aria-current={selected ? 'true' : undefined}
+            onClick={onSelect}
+            className={cn(
+              TILE,
+              'bg-background font-medium text-foreground text-sm leading-5 hover:bg-muted',
+              'motion-safe:transition-[background-color,border-color] motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-standard)',
+              selected && 'border-border-strong bg-muted',
+            )}
+          />
+        }
+      >
+        v{v.number}
+      </TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
   )
 }
 
