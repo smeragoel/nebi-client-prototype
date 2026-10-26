@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageCheck, PackageX, Plus, RotateCw, Search, Server, SquareArrowUp, TriangleAlert, Upload, X } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, CodeXml, Download, GitCompare, Import, PackageCheck, PackageX, Plus, RotateCw, Search, Server, SquareArrowUp, TriangleAlert, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
@@ -34,56 +34,59 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
 
   return (
     <section className="flex min-w-0 flex-1 flex-col gap-4" aria-label={`Version ${v.number}`}>
-      {/* 2026-09-28 sync with Nat (Figma 2898:9525 / 2903:8908): no install banner. Install or Uninstall
-          sits with the other actions, with size or "Replaces vN" under it; the meta line only states facts that are true. */}
+      {/* UX review `01` (3170:12988 / 3170:13707): title and meta, the description, then one toolbar holding every
+          action on this version. Testers missed Compare in the rail header and buttons that all looked alike, so
+          Compare leads the row and Install is the only primary button. The meta line only states facts that are true. */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex min-h-7 items-center gap-2">
-              <h2 className="font-semibold text-foreground text-xl leading-7">Version {v.number}</h2>
-              {v.tags.map((t) => (
-                <Badge key={t} variant="outline">
-                  {t}
-                </Badge>
-              ))}
-              {/* UX review `03` 3189:14168: the rail's Published badge, after the tags. */}
-              {v.publications.length > 0 && (
-                <Badge variant="secondary">
-                  <PackageCheck />
-                  Published
-                </Badge>
-              )}
-              {installed && (
-                <Badge className="border-transparent bg-success text-success-foreground">
-                  <Check />
-                  Installed
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-start gap-2">
-              <Tooltip>
-                <TooltipTrigger
-                  render={<Button variant="outline" size="sm" disabled={serverOnly} onClick={createNewVersion} />}
-                >
-                  <Plus />
-                  Create new version
-                </TooltipTrigger>
-                <TooltipContent>
-                  {serverOnly ? `Pull version ${v.number} first` : `Creates a new version based on version ${v.number}`}
-                </TooltipContent>
-              </Tooltip>
-              <PushAction project={project} version={v} serverOnly={serverOnly} />
-              <Button variant="outline" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
-                <Upload />
-                Publish
-              </Button>
-              <InstallAction project={project} version={v} serverOnly={serverOnly} />
-            </div>
+          <div className="flex min-h-7 items-center gap-2">
+            <h2 className="font-semibold text-foreground text-xl leading-7">Version {v.number}</h2>
+            {v.tags.map((t) => (
+              <Badge key={t} variant="outline">
+                {t}
+              </Badge>
+            ))}
+            {/* UX review `03` 3189:14168: the rail's Published badge, after the tags. */}
+            {v.publications.length > 0 && (
+              <Badge variant="secondary">
+                <PackageCheck />
+                Published
+              </Badge>
+            )}
+            {installed && (
+              <Badge className="border-transparent bg-success text-success-foreground">
+                <Check />
+                Installed
+              </Badge>
+            )}
           </div>
           <VersionMeta project={project} version={v} serverOnly={serverOnly} />
         </div>
 
         <p className="text-base text-foreground">{v.description}</p>
+
+        <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label={`Version ${v.number} actions`}>
+          <Button variant="secondary" size="sm" onClick={() => notBuilt('Compare versions')}>
+            <GitCompare />
+            Compare versions
+          </Button>
+          <Tooltip>
+            <TooltipTrigger render={<Button variant="secondary" size="sm" disabled={serverOnly} onClick={createNewVersion} />}>
+              <Plus />
+              Create new version
+            </TooltipTrigger>
+            <TooltipContent>
+              {serverOnly ? `Pull version ${v.number} first` : `Creates a new version based on version ${v.number}`}
+            </TooltipContent>
+          </Tooltip>
+          <PushAction project={project} version={v} serverOnly={serverOnly} />
+          <Button variant="secondary" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
+            <Upload />
+            Publish
+          </Button>
+          <InstallAction project={project} version={v} serverOnly={serverOnly} />
+        </div>
+
         <InstallAlert project={project} version={v} />
         <InstallFailedAlert project={project} version={v} />
       </div>
@@ -184,7 +187,7 @@ function PushAction({ project, version: v, serverOnly }: { project: Project; ver
   const server = project.serverVersion
   const sends = project.versions.map((x) => x.number).filter((n) => n > server && n <= v.number).sort((a, b) => a - b)
   const props = {
-    variant: 'outline',
+    variant: 'secondary',
     size: 'sm',
     loading: pushing?.projectId === project.id && pushing.upTo === v.number,
     loadingText: 'Pushing…',
@@ -210,12 +213,8 @@ function PushAction({ project, version: v, serverOnly }: { project: Project; ver
 /* Install / Uninstall                                                 */
 /* ------------------------------------------------------------------ */
 
-/** The last header action, with a muted caption under it: size on disk, or what an install replaces. */
-/**
- * The note under Install / Uninstall (Figma 2898:9525, 2903:8908): left-aligned to the button and
- * wrapping at the button's width, so the column is only ever as wide as the button.
- */
-const UNDER_BUTTON = 'block w-0 min-w-full text-muted-foreground-strong text-xs'
+/** The last toolbar action, with a muted note beside it: size on disk, or what an install replaces (3170:12988). */
+const BESIDE_BUTTON = 'text-muted-foreground-strong text-xs'
 
 function InstallAction({ project, version: v, serverOnly }: { project: Project; version: Version; serverOnly: boolean }) {
   const { installing, install, pull } = useStore()
@@ -234,19 +233,19 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
 
   if (other === v.number) {
     return (
-      <div className="flex flex-col items-start gap-1">
-        <Button variant="outline" size="sm" onClick={() => setUninstallOpen(true)}>
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={() => setUninstallOpen(true)}>
           <PackageX />
           Uninstall
         </Button>
-        {project.size && <span className={UNDER_BUTTON}>{project.size} on disk</span>}
+        {project.size && <span className={BESIDE_BUTTON}>{project.size} on disk</span>}
         <UninstallDialog project={project} open={uninstallOpen} onOpenChange={setUninstallOpen} />
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex items-center gap-2">
       <Button
         size="sm"
         loading={isInstalling}
@@ -258,7 +257,7 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
         Install
       </Button>
       {other != null && (
-        <span className={UNDER_BUTTON}>
+        <span className={BESIDE_BUTTON}>
           Replaces{' '}
           <Link to={`?v=${other}`} replace className="underline underline-offset-4 hover:text-primary">
             v{other}

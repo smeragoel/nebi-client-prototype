@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Laptop, PackageCheck, PanelLeftClose, PanelLeftOpen, Search, Server } from 'lucide-react'
+import { Check, ChevronDown, ChevronsLeft, ChevronsRight, Laptop, PackageCheck, Search, Server } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { PersonAvatar } from '@/components/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -104,7 +104,7 @@ export function VersionRail({
           />
         }
       >
-        {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+        {collapsed ? <ChevronsRight /> : <ChevronsLeft />}
       </TooltipTrigger>
       <TooltipContent side={collapsed ? 'right' : 'top'}>{toggleLabel}</TooltipContent>
     </Tooltip>
@@ -132,14 +132,10 @@ export function VersionRail({
       {/* Heading, notices and search stay put; only the version list scrolls. Fixed width, so the content is
           clipped while the rail opens instead of reflowing. */}
       <div className="flex w-[374px] flex-col">
+        {/* 3170:12988: Compare versions moved to the version toolbar, so the hide toggle takes its place. */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            {toggleButton}
-            <h2 className="font-semibold text-base text-foreground leading-5">Versions</h2>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => notBuilt('Compare versions')}>
-            Compare versions
-          </Button>
+          <h2 className="font-semibold text-base text-foreground leading-5">Versions</h2>
+          {toggleButton}
         </div>
 
         <Collapse open={ahead > 0}>
@@ -227,7 +223,7 @@ const RAIL = cn(
 /**
  * The collapsed rail (3170:13707): the toggle, a sync tile (`Sync tile` 3177:13502) per notice that would
  * show, then version tiles (`Version tile` 3174:13520) in time groups, 4px apart in a group and 12px between
- * groups. Search, tags and Compare versions only show in the expanded rail.
+ * groups. Search and tags only show in the expanded rail.
  */
 function CollapsedStrip({
   project,
