@@ -213,13 +213,13 @@ function NewProjectButton() {
         </Menu.Trigger>
         <DropdownMenuPortal>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => navigate('/projects/new')}>
-              <LayoutTemplate />
-              Create from GUI
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/projects/new?mode=toml')}>
               <CodeXml />
               Create from pixi.toml
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/projects/new')}>
+              <LayoutTemplate />
+              Create from GUI
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenuPortal>

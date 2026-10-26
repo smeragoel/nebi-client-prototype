@@ -1,4 +1,4 @@
-import { Check, Laptop, Search, Server } from 'lucide-react'
+import { Check, Laptop, Search, Server, Upload } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
@@ -16,7 +16,7 @@ import { useSyncMotion } from './useSyncMotion'
 /**
  * Left rail of project details. Rows follow the live `Version row` component 2931:11315, which the
  * 2026-09-28 consistency pass put in every project-details frame: line 1 is the number, then
- * Installed/Installing → tags → +N, with the sync marker and Published chip on the right; line 2 is
+ * Installed/Installing → tags → +N, with the sync marker and published icon on the right; line 2 is
  * the author avatar and the description.
  */
 export function VersionRail({
@@ -91,7 +91,7 @@ export function VersionRail({
                 loadingText="Pushing…"
                 onClick={() => push(project.id)}
               >
-                Push to server
+                Push
               </Button>
             }
           >
@@ -103,7 +103,7 @@ export function VersionRail({
             icon={<Server />}
             action={
               <Button variant="outline" size="xs" onClick={() => pull(project.id)}>
-                Pull from server
+                Pull version {shownBehind.version}
               </Button>
             }
           >
@@ -261,9 +261,10 @@ function VersionRow({
         <span className="ml-auto flex items-center gap-2">
           {sync && <SyncLabel marker={sync} compact={compactSync} />}
           {published && (
-            // User test 9 Oct: a static chip, not an icon that reads as a link.
             <Tooltip>
-              <TooltipTrigger render={<Badge variant="secondary" />}>Published</TooltipTrigger>
+              <TooltipTrigger render={<span className="text-muted-foreground-strong" />}>
+                <Upload className="size-3.5" aria-label="Published" />
+              </TooltipTrigger>
               <TooltipContent>
                 Published to {v.publications.map((p) => `${p.registry}/${p.repository}:${p.tag}`).join(', ')}
               </TooltipContent>
@@ -287,8 +288,7 @@ const SYNC = {
 
 function SyncLabel({ marker, compact }: { marker: Exclude<SyncMarker, null>; compact: boolean }) {
   const { icon: Icon, label, tip } = SYNC[marker]
-  // User test 9 Oct: plain muted text, so Installed and tags are the only chips on the row.
-  const tone = marker === 'in-sync' ? 'text-success-foreground' : 'text-muted-foreground'
+  const tone = marker === 'in-sync' ? 'text-success-foreground' : 'text-muted-foreground-strong'
   return (
     <Tooltip>
       <TooltipTrigger render={<span data-sync={marker} className={cn('flex items-center gap-1 text-xs leading-4', tone)} />}>

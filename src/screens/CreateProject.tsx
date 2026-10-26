@@ -189,7 +189,7 @@ export default function CreateProject() {
         </div>
 
         <div className={PAGE_COLUMN}>
-          <FormSection id="project" title="Project" intro="What the project is called.">
+          <FormSection id="project" title="Project" intro="Its name, and where its folder goes on this machine.">
             <FormField label="Project name" error={nameError}>
               <Input
                 ref={nameRef}
@@ -199,6 +199,38 @@ export default function CreateProject() {
                 autoComplete="off"
                 spellCheck={false}
               />
+            </FormField>
+            <FormField
+              label="Path (optional)"
+              description="Where the project folder is created. Leave blank to use Nebi’s default location."
+            >
+              <div className="relative">
+                <Input
+                  value={path}
+                  onChange={(e) => setPath(e.target.value)}
+                  placeholder="e.g., /home/user/projects/my-data-project"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="pr-10"
+                />
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="absolute top-1/2 right-1.5 -translate-y-1/2 text-muted-foreground"
+                        aria-label="Choose a folder"
+                        onClick={() => notBuilt('The folder picker')}
+                      />
+                    }
+                  >
+                    <FolderOpen className="size-[18px]" />
+                  </TooltipTrigger>
+                  <TooltipContent>Choose a folder</TooltipContent>
+                </Tooltip>
+              </div>
             </FormField>
           </FormSection>
 
@@ -231,42 +263,6 @@ export default function CreateProject() {
               </div>
             </FormSection>
           )}
-
-          {/* User test 9 Oct: after the environment, so the form starts with what the project is. */}
-          <FormSection id="location" title="Location" intro="Where its folder goes on this machine.">
-            <FormField
-              label="Location (optional)"
-              description="Where the project folder is created. Leave blank to use Nebi’s default location."
-            >
-              <div className="relative">
-                <Input
-                  value={path}
-                  onChange={(e) => setPath(e.target.value)}
-                  placeholder="e.g., /home/user/projects/my-data-project"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="pr-10"
-                />
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="absolute top-1/2 right-1.5 -translate-y-1/2 text-muted-foreground"
-                        aria-label="Choose a folder"
-                        onClick={() => notBuilt('The folder picker')}
-                      />
-                    }
-                  >
-                    <FolderOpen className="size-[18px]" />
-                  </TooltipTrigger>
-                  <TooltipContent>Choose a folder</TooltipContent>
-                </Tooltip>
-              </div>
-            </FormField>
-          </FormSection>
 
           <FormSection id="about" title="About version 1" intro="Shown in the version list and on the version’s page.">
             <FormField
