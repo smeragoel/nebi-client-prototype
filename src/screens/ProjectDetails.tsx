@@ -1,12 +1,14 @@
-import { Copy, Share2 } from 'lucide-react'
+import { Copy, Share2, TriangleAlert } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { VersionPanel } from '@/components/details/VersionPanel'
 import { VersionRail } from '@/components/details/VersionRail'
 import { railVersions } from '@/components/details/sync'
+import { Badge } from '@/components/ui/badge'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/toast'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { failedInstall } from '@/data/jobs'
 import { notBuilt, useStore } from '@/state/store'
 
 /**
@@ -15,7 +17,7 @@ import { notBuilt, useStore } from '@/state/store'
  */
 export default function ProjectDetails() {
   const { id } = useParams()
-  const { projects } = useStore()
+  const { projects, jobs } = useStore()
   const [params, setParams] = useSearchParams()
   const project = projects.find((p) => p.id === id)
 
@@ -61,7 +63,16 @@ export default function ProjectDetails() {
           </BreadcrumbList>
         </Breadcrumb>
         <div className="flex items-center justify-between gap-4">
-          <h1 className="font-bold text-3xl text-foreground">{project.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-bold text-3xl text-foreground">{project.name}</h1>
+            {/* Option B (3187:15205): the same status badge as the Projects list, until the next install starts. */}
+            {failedInstall(jobs, project.id) && (
+              <Badge variant="destructive">
+                <TriangleAlert />
+                Install failed
+              </Badge>
+            )}
+          </div>
           <Button variant="secondary" size="sm" onClick={() => notBuilt('Share')}>
             <Share2 />
             Share

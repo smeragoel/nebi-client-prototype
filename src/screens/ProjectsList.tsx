@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, Ellipsis, History, LayoutTemplate, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, CodeXml, Ellipsis, History, LayoutTemplate, Pencil, Plus, Search, Trash2, TriangleAlert } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { UninstallDialog } from '@/components/UninstallDialog'
@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { failedInstall } from '@/data/jobs'
 import type { Project } from '@/data/sample'
 import { newestLocal } from '@/components/details/sync'
 import { notBuilt, type Scenario, useStore } from '@/state/store'
@@ -228,8 +229,9 @@ function NewProjectButton() {
 }
 
 function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall: () => void }) {
-  const { installing, install } = useStore()
+  const { installing, install, jobs } = useStore()
   const navigate = useNavigate()
+  const failed = failedInstall(jobs, p.id)
   const isInstalling = installing?.projectId === p.id
   const installed = p.installedVersion != null
   const installTarget = p.lastInstalledVersion ?? newestLocal(p)
@@ -289,15 +291,24 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
             Uninstall
           </Button>
         ) : (
-          <Button
-            size="xs"
-            loading={isInstalling}
-            loadingText="Installing…"
-            disabled={installing != null && !isInstalling}
-            onClick={() => install(p.id, installTarget)}
-          >
-            Install
-          </Button>
+          <span className="flex items-center gap-1.5">
+            <Button
+              size="xs"
+              loading={isInstalling}
+              loadingText="Installing…"
+              disabled={installing != null && !isInstalling}
+              onClick={() => install(p.id, installTarget)}
+            >
+              Install
+            </Button>
+            {/* Option B (3187:15154): the failure is a status badge after Install, which retries. The badge opens the job. */}
+            {failed && (
+              <Badge variant="destructive" render={<Link to={`/jobs/${failed.id}`} />}>
+                <TriangleAlert />
+                Install failed
+              </Badge>
+            )}
+          </span>
         )}
       </TableCell>
 

@@ -25,6 +25,11 @@ export type Job = {
   pending: string[]
   /** `Job.Error`. For a failed install it's only the exit status; the cause is in the log. */
   error?: string
+  /**
+   * The version an env_install installed. Not in the model: `WorkspaceVersion.JobID` only links a version to
+   * the job that created it (ux.md item 15, ask Philip). The Install failed alert names it.
+   */
+  version?: number
 }
 
 export const JOB_TYPE_LABEL: Record<JobType, string> = {
@@ -77,6 +82,37 @@ export const lockLines = [
 
 /** What the worker writes when a job that edits pixi.toml is cancelled or fails (worker.go). */
 export const restoreLines = ['Restoring pixi.toml...', 'Restoring pixi.lock...', 'Workspace restored successfully']
+
+/**
+ * sandbox's install always fails (Figma UX review `02 Install failed` 3184:13506): tensorflow's download drops.
+ * The seeded failed job and every new install of sandbox write these lines after `Running: pixi install -v`.
+ */
+export const sandboxDownloadLines = [
+  ' INFO pixi_core::lock_file::update: updating lock-file',
+  " INFO pixi_core::install: installing environment 'default' for linux-64",
+  ' INFO rattler::install: downloading numpy-2.1.3-py312h5f1b2c_0.conda',
+  ' INFO rattler::install: downloading pandas-2.2.3-py312hf9745cd_1.conda',
+  ' INFO rattler::install: downloading scipy-1.14.1-py312h7d485d2_0.conda',
+  ' INFO rattler::install: downloading matplotlib-3.9.2-py312h7900ff3_1.conda',
+  ' INFO rattler::install: downloading tensorflow-2.18.0-cpu_py312h1a3f8f9_0.conda',
+]
+
+export const sandboxErrorLines = [
+  'Error:   × failed to fetch tensorflow-2.18.0-cpu_py312h1a3f8f9_0.conda',
+  '  ├─> error sending request for url (https://conda.anaconda.org/conda-forge/linux-64/tensorflow-2.18.0-cpu_py312h1a3f8f9_0.conda)',
+  '  ╰─> connection closed before message completed',
+  'Cleaning up job artifact: /home/user/sandbox/.pixi/envs',
+]
+
+export const SANDBOX_INSTALL_ERROR = 'pixi install failed: exit status 1'
+
+/** The project's latest env_install job, when it failed. It stays failed until the next install starts. */
+export function failedInstall(jobs: Job[], projectId: string) {
+  const latest = jobs
+    .filter((j) => j.projectId === projectId && j.type === 'env_install')
+    .reduce<Job | null>((a, j) => (a == null || j.createdAt > a.createdAt ? j : a), null)
+  return latest?.status === 'failed' ? latest : null
+}
 
 /* ------------------------------------------------------------------ */
 /* Sample jobs (Figma 05a 2399:7084, 05b 2431:7330, 05c 2435:7405)      */
@@ -134,20 +170,14 @@ export function sampleJobs(now = Date.now()): Job[] {
         ' INFO rattler::install: downloading transformers-4.46.3-pyhd8ed1ab_0.conda',
       ],
     },
-    done('9a7d4e2c-1f36-4b88-a0c5-e62b9f0d8471', 'env_install', 'sandbox', 'failed', 30 * MIN, 42, [
-      'Running: pixi install -v',
-      ' INFO pixi_core::lock_file::update: updating lock-file',
-      " INFO pixi_core::install: installing environment 'default' for linux-64",
-      ' INFO rattler::install: downloading numpy-2.1.3-py312h5f1b2c_0.conda',
-      ' INFO rattler::install: downloading pandas-2.2.3-py312hf9745cd_1.conda',
-      ' INFO rattler::install: downloading scipy-1.14.1-py312h7d485d2_0.conda',
-      ' INFO rattler::install: downloading matplotlib-3.9.2-py312h7900ff3_1.conda',
-      ' INFO rattler::install: downloading tensorflow-2.18.0-cpu_py312h1a3f8f9_0.conda',
-      'Error:   × failed to fetch tensorflow-2.18.0-cpu_py312h1a3f8f9_0.conda',
-      '  ├─> error sending request for url (https://conda.anaconda.org/conda-forge/linux-64/tensorflow-2.18.0-cpu_py312h1a3f8f9_0.conda)',
-      '  ╰─> connection closed before message completed',
-      'Cleaning up job artifact: /home/user/sandbox/.pixi/envs',
-    ], 'pixi install failed: exit status 1'),
+    {
+      ...done('9a7d4e2c-1f36-4b88-a0c5-e62b9f0d8471', 'env_install', 'sandbox', 'failed', 30 * MIN, 42, [
+        'Running: pixi install -v',
+        ...sandboxDownloadLines,
+        ...sandboxErrorLines,
+      ], SANDBOX_INSTALL_ERROR),
+      version: 1,
+    },
     done('2c58f1b9-8e04-47d1-b6a3-5f19c7e20d94', 'update', 'project-1', 'succeeded', 3 * HOUR, 72, [
       'Solving environment from current pixi.toml...',
       ...lockLines,

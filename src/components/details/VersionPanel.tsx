@@ -1,8 +1,9 @@
-import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageX, Plus, Search, Server, SquareArrowUp, Upload, X } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, CodeXml, Download, Import, PackageX, Plus, RotateCw, Search, Server, SquareArrowUp, TriangleAlert, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PersonAvatar } from '@/components/avatar'
 import { UninstallDialog } from '@/components/UninstallDialog'
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CodeBlock, CodeBlockBody } from '@/components/ui/code-block'
@@ -14,6 +15,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTab } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { failedInstall } from '@/data/jobs'
 import { fullDate, ME, type Project, pixiToml, resolve, type Version } from '@/data/sample'
 import { notBuilt, useStore } from '@/state/store'
 import { PublishDialog } from './PublishDialog'
@@ -76,6 +78,7 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
 
         <p className="text-base text-foreground">{v.description}</p>
         <InstallAlert project={project} version={v} />
+        <InstallFailedAlert project={project} version={v} />
       </div>
 
       <hr className="border-border" />
@@ -257,6 +260,33 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
         </span>
       )}
     </div>
+  )
+}
+
+/**
+ * Option B (Figma 3187:15205): under the description, above the spec, while this version's latest install
+ * is the one that failed. Starting another install clears it. The code Alert has the destructive variant
+ * that the NDS Figma Alert lacks, so this uses it instead of the tinted info copy.
+ */
+function InstallFailedAlert({ project, version: v }: { project: Project; version: Version }) {
+  const { jobs, install, installing } = useStore()
+  const failed = failedInstall(jobs, project.id)
+  if (!failed || failed.version !== v.number) return null
+  return (
+    <Alert variant="destructive">
+      <TriangleAlert aria-hidden />
+      <AlertTitle>Version {v.number} couldn’t install</AlertTitle>
+      <AlertDescription>A package download failed while installing.</AlertDescription>
+      <AlertAction className="flex items-center gap-2">
+        <Button variant="outline" size="xs" render={<Link to={`/jobs/${failed.id}`} />}>
+          View job
+        </Button>
+        <Button variant="secondary" size="xs" disabled={installing != null} onClick={() => install(project.id, v.number)}>
+          <RotateCw />
+          Try again
+        </Button>
+      </AlertAction>
+    </Alert>
   )
 }
 

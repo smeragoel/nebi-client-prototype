@@ -143,9 +143,10 @@ export const INITIAL_PROJECTS: Project[] = [
     versions: [{ ...project1History()[0], ageDays: 9, tags: ['latest'] }],
     serverOnly: [],
     serverVersion: null,
-    installedVersion: 1,
+    // Not installed: its latest install failed (the seeded env_install job in jobs.ts).
+    installedVersion: null,
     lastInstalledVersion: 1,
-    size: '233.4 MB',
+    size: null,
     remotes: ['quay.io/reiemp'],
   },
 ]
