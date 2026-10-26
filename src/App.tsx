@@ -15,11 +15,15 @@ import ServerUi from '@/screens/ServerUi'
 import Start from '@/screens/Start'
 import { StoreProvider } from '@/state/store'
 
+/** How long a toast without an action stays up. Hovering or focusing the toasts pauses it. */
+const TOAST_MS = 10_000
+
 export default function App() {
   return (
     <StoreProvider>
       <TooltipProvider>
-        <Toaster>
+        {/* User testing, Oct 2026: Base UI's 5s default closed toasts before people finished reading them. */}
+        <Toaster timeout={TOAST_MS}>
           <div className="flex min-h-screen flex-col">
             <ScrollToTop />
             <Header />
