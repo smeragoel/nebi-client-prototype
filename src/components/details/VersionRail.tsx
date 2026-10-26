@@ -96,7 +96,7 @@ export function VersionRail({
         render={
           <Button
             ref={toggleRef}
-            variant="ghost"
+            variant="outline"
             size="icon-sm"
             aria-label={toggleLabel}
             aria-expanded={!collapsed}
