@@ -44,7 +44,8 @@ export default function CreateVersion() {
     draftToToml({ name: project?.name ?? '', channels: base?.channels ?? [], platforms: base?.platforms ?? [], requested: base?.requested ?? [] })
   const [toml, setToml] = useState(baseToml)
   const [tags, setTags] = useState(['latest'])
-  const [description, setDescription] = useState('')
+  // null until the person types, so the field keeps following the suggestion as packages change.
+  const [description, setDescription] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [leavingTo, setLeavingTo] = useState<string | null>(null)
   const [created, setCreated] = useState(false)
@@ -59,8 +60,9 @@ export default function CreateVersion() {
 
   const summary = base ? changeSummary(base.requested, env.requested) : []
   const suggestion = summary.length ? capitalise(summary.join(', ')) : null
-  // UX review 04 (3201:14619): the suggestion is the placeholder, and a blank field saves it.
-  const finalDescription = description.trim() || suggestion || ''
+  // UX review 04 (3201:14619): the suggestion is pre-filled, editable text.
+  const shownDescription = description ?? suggestion ?? ''
+  const finalDescription = shownDescription.trim()
 
   const dirty =
     !created &&
@@ -70,7 +72,7 @@ export default function CreateVersion() {
       !same(env.requested, base.requested) ||
       (mode === 'toml' && toml.trim() !== baseToml().trim()) ||
       !same(tags, ['latest']) ||
-      !!description.trim())
+      description !== null)
 
   useEffect(() => {
     if (!dirty) return
@@ -256,13 +258,13 @@ export default function CreateVersion() {
             <FormField
               label="Description"
               error={descriptionError}
-              description={suggestion ? 'Leave blank to use the suggestion.' : 'Required.'}
+              description={description === null && suggestion ? 'Suggested from your changes.' : undefined}
             >
               <Input
                 ref={descriptionRef}
-                value={description}
+                value={shownDescription}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder={suggestion ?? 'e.g., Swapped tensorflow for scikit-learn'}
+                placeholder="e.g., Swapped tensorflow for scikit-learn"
                 autoComplete="off"
               />
             </FormField>
