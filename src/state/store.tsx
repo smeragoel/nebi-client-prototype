@@ -486,7 +486,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         type: 'loading',
         title: sp.name,
         description: andInstall ? 'Pull and install job started' : 'Pull job started',
-        actionProps: { children: 'View in Jobs', onClick: () => navigate('/jobs') },
+        // Pull isn't a job, so there's no log to link to until the install starts. Stays up until it finishes.
+        timeout: 0,
       })
 
       window.setTimeout(() => {
@@ -518,8 +519,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return
         }
         setPulling({ serverId, localId: id })
-        toast.update(toastId, { description: `Pulled. Installing version ${n}…` })
         const jobId = install(id, n, { toast: false })
+        toast.update(toastId, {
+          description: `Pulled. Installing version ${n}…`,
+          actionProps: { children: 'View job', onClick: () => navigate(`/jobs/${jobId}`) },
+        })
         window.setTimeout(() => {
           setPulling(null)
           if (jobsRef.current.find((j) => j.id === jobId)?.status === 'cancelled') {
