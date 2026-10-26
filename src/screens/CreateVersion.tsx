@@ -253,15 +253,6 @@ export default function CreateVersion() {
           )}
 
           <FormSection id="about" title="About this version" intro="Shown in the version list and on the version’s page.">
-            <ChipsField
-              label="Tags (optional)"
-              value={tags}
-              onChange={setTags}
-              suggestions={[...new Set(project.versions.flatMap((v) => v.tags))]}
-              placeholder="Add a tag"
-              description="A tag stays with this version until a newer version uses the same tag. latest does this automatically."
-              invalid={tagError}
-            />
             <FormField
               label="Description"
               error={descriptionError}
@@ -275,6 +266,15 @@ export default function CreateVersion() {
                 autoComplete="off"
               />
             </FormField>
+            <ChipsField
+              label="Tags (optional)"
+              value={tags}
+              onChange={setTags}
+              suggestions={[...new Set(project.versions.flatMap((v) => v.tags))]}
+              placeholder="Add a tag"
+              description="A tag stays with this version until a newer version uses the same tag. latest does this automatically."
+              invalid={tagError}
+            />
           </FormSection>
         </div>
 
