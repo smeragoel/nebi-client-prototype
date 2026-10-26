@@ -10,7 +10,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { failedInstall } from '@/data/jobs'
 import type { Project } from '@/data/sample'
 import { newestLocal } from '@/components/details/sync'
 import { notBuilt, type Scenario, useStore } from '@/state/store'
@@ -229,10 +228,9 @@ function NewProjectButton() {
 }
 
 function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall: () => void }) {
-  const { installing, install, jobs } = useStore()
+  const { installing, install } = useStore()
   const navigate = useNavigate()
   const isInstalling = installing?.projectId === p.id
-  const failed = failedInstall(jobs, p.id)
   const installed = p.installedVersion != null
   const installTarget = p.lastInstalledVersion ?? newestLocal(p)
 
@@ -291,23 +289,15 @@ function ProjectRow({ project: p, onUninstall }: { project: Project; onUninstall
             Uninstall
           </Button>
         ) : (
-          <span className="flex items-center gap-1.5">
-            <Button
-              size="xs"
-              loading={isInstalling}
-              loadingText="Installing…"
-              disabled={installing != null && !isInstalling}
-              onClick={() => install(p.id, installTarget)}
-            >
-              Install
-            </Button>
-            {/* User test 7 Oct; not in Figma yet. Only when the latest env_install job failed. */}
-            {failed && (
-              <Badge variant="destructive" render={<Link to={`/jobs/${failed.id}`} />}>
-                Install failed
-              </Badge>
-            )}
-          </span>
+          <Button
+            size="xs"
+            loading={isInstalling}
+            loadingText="Installing…"
+            disabled={installing != null && !isInstalling}
+            onClick={() => install(p.id, installTarget)}
+          >
+            Install
+          </Button>
         )}
       </TableCell>
 
