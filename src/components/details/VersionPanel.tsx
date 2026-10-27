@@ -54,7 +54,7 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
               </Badge>
             )}
             {installed && (
-              <Badge className="border-transparent bg-success text-success-foreground">
+              <Badge className="border-transparent bg-success text-success-foreground" data-tour="installed">
                 <Check />
                 Installed
               </Badge>
@@ -71,7 +71,9 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
             Compare versions
           </Button>
           <Tooltip>
-            <TooltipTrigger render={<Button variant="secondary" size="sm" disabled={serverOnly} onClick={createNewVersion} />}>
+            <TooltipTrigger
+              render={<Button variant="secondary" size="sm" disabled={serverOnly} onClick={createNewVersion} data-tour="create-version" />}
+            >
               <Plus />
               Create new version
             </TooltipTrigger>
@@ -80,7 +82,7 @@ export function VersionPanel({ project, version: v, serverOnly }: { project: Pro
             </TooltipContent>
           </Tooltip>
           <PushAction project={project} version={v} serverOnly={serverOnly} />
-          <Button variant="secondary" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)}>
+          <Button variant="secondary" size="sm" disabled={serverOnly} onClick={() => setPublishOpen(true)} data-tour="publish">
             <Upload />
             Publish
           </Button>
@@ -193,6 +195,7 @@ function PushAction({ project, version: v, serverOnly }: { project: Project; ver
     loadingText: 'Pushing…',
     disabled: pushing != null && pushing.upTo !== v.number,
     onClick: () => push(project.id, v.number),
+    'data-tour': 'push',
   } as const
   const label = (
     <>
@@ -252,6 +255,7 @@ function InstallAction({ project, version: v, serverOnly }: { project: Project; 
         loadingText="Installing…"
         disabled={installing != null && !isInstalling}
         onClick={() => install(project.id, v.number, { toast: false })}
+        data-tour="install"
       >
         <Import />
         Install

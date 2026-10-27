@@ -1,6 +1,7 @@
 import { BookOpen, Boxes, Computer, ExternalLink, Package, Server } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import nebiMark from '@/assets/nebi-mark.svg'
+import { HelpMenu } from '@/components/HelpMenu'
 import { ThemeMenu } from '@/components/ThemeMenu'
 import { Badge } from '@/components/ui/badge'
 import { MenuBarActions, MenuBarBrand, MenuBarNav, NavigationMenu, NavLink } from '@/components/ui/navigation-menu'
@@ -86,6 +87,7 @@ export function AppHeader() {
             {connection.url}
           </Badge>
         )}
+        <HelpMenu />
         <ThemeMenu />
       </MenuBarActions>
     </NavigationMenu>

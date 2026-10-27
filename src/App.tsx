@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import { AppHeader } from '@/components/AppHeader'
+import { TourProvider } from '@/components/tour/tour-context'
 import { Toaster } from '@/components/ui/toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import CompareVersions from '@/screens/CompareVersions'
@@ -21,27 +22,29 @@ const TOAST_MS = 10_000
 export default function App() {
   return (
     <StoreProvider>
-      <TooltipProvider>
-        {/* User testing, Oct 2026: Base UI's 5s default closed toasts before people finished reading them. */}
-        <Toaster timeout={TOAST_MS}>
-          <div className="flex min-h-screen flex-col">
-            <ScrollToTop />
-            <Header />
-            <Routes>
-              <Route path="/" element={<ProjectsList />} />
-              <Route path="/projects/new" element={<CreateProject />} />
-              <Route path="/projects/:id" element={<ProjectDetails />} />
-              <Route path="/projects/:id/new-version" element={<CreateVersion />} />
-              <Route path="/projects/:id/compare" element={<CompareVersions />} />
-              <Route path="/server" element={<Server />} />
-              <Route path="/server-ui" element={<ServerUi />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/jobs/:id" element={<JobDetails />} />
-              <Route path="/screens" element={<Start />} />
-            </Routes>
-          </div>
-        </Toaster>
-      </TooltipProvider>
+      <TourProvider>
+        <TooltipProvider>
+          {/* User testing, Oct 2026: Base UI's 5s default closed toasts before people finished reading them. */}
+          <Toaster timeout={TOAST_MS}>
+            <div className="flex min-h-screen flex-col">
+              <ScrollToTop />
+              <Header />
+              <Routes>
+                <Route path="/" element={<ProjectsList />} />
+                <Route path="/projects/new" element={<CreateProject />} />
+                <Route path="/projects/:id" element={<ProjectDetails />} />
+                <Route path="/projects/:id/new-version" element={<CreateVersion />} />
+                <Route path="/projects/:id/compare" element={<CompareVersions />} />
+                <Route path="/server" element={<Server />} />
+                <Route path="/server-ui" element={<ServerUi />} />
+                <Route path="/jobs" element={<Jobs />} />
+                <Route path="/jobs/:id" element={<JobDetails />} />
+                <Route path="/screens" element={<Start />} />
+              </Routes>
+            </div>
+          </Toaster>
+        </TooltipProvider>
+      </TourProvider>
     </StoreProvider>
   )
 }

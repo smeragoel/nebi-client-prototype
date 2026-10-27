@@ -108,7 +108,7 @@ export function VersionRail({
 
   if (collapsed) {
     return (
-      <aside className={cn(RAIL, 'w-8')} aria-label="Versions">
+      <aside className={cn(RAIL, 'w-8')} aria-label="Versions" data-tour="rail">
         <CollapsedStrip
           project={project}
           selected={selected}
@@ -121,7 +121,7 @@ export function VersionRail({
   }
 
   return (
-    <aside className={cn(RAIL, 'w-[374px]')} aria-label="Versions">
+    <aside className={cn(RAIL, 'w-[374px]')} aria-label="Versions" data-tour="rail">
       {/* Heading and search stay put; only the version list scrolls. Fixed width, so the content is
           clipped while the rail opens instead of reflowing. */}
       <div className="flex w-[374px] flex-col">

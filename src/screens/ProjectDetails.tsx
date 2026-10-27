@@ -5,6 +5,7 @@ import { VersionPanel } from '@/components/details/VersionPanel'
 import { VersionRail } from '@/components/details/VersionRail'
 import { railVersions } from '@/components/details/sync'
 import { ShareDialog } from '@/components/server/ShareDialog'
+import { ProjectTour } from '@/components/tour/ProjectTour'
 import { Badge } from '@/components/ui/badge'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
@@ -79,7 +80,13 @@ export default function ProjectDetails() {
               </Badge>
             )}
           </div>
-          <Button variant="secondary" size="sm" onClick={() => (serverProject ? setSharing(true) : notBuilt('Share'))}>
+          {/* The tour's Share step only runs when there's a server copy to share. */}
+          <Button
+            variant="secondary"
+            size="sm"
+            data-tour={serverProject ? 'share' : undefined}
+            onClick={() => (serverProject ? setSharing(true) : notBuilt('Share'))}
+          >
             <Share2 />
             Share
           </Button>
@@ -109,6 +116,7 @@ export default function ProjectDetails() {
       </div>
 
       {serverProject && <ShareDialog project={serverProject} open={sharing} onOpenChange={setSharing} />}
+      <ProjectTour />
     </main>
   )
 }
