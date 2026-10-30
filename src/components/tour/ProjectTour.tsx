@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { type KeyboardEvent, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { findTarget, PROJECT_TOUR, type TourStep } from './steps'
 import { useTour } from './tour-context'
@@ -12,8 +13,8 @@ const GAP = 12
 const EDGE = 16
 
 /**
- * Project details onboarding (UX review `06` 3245:15707): the first-visit prompt in the corner, then the
- * guided steps. Mounted by the Project details screen, so leaving the page ends the tour.
+ * Project details onboarding (UX review `06` 3245:15707): the welcome dialog on the first project opened, then
+ * the guided steps. Mounted by the Project details screen, so leaving the page ends the tour.
  */
 export function ProjectTour() {
   const { active, seen, start, stop, dismissPrompt } = useTour()
@@ -35,37 +36,26 @@ export function ProjectTour() {
   return <TourPrompt onStart={start} onDismiss={dismissPrompt} />
 }
 
-/** `Onboarding / Tour prompt` 3245:15746. No scrim: the page stays usable while it's up. */
+/**
+ * Welcome dialog (Tour 0 `3246:15711`, Nat / Smera 2026-10-29): centred over the scrim so it can't be missed the way
+ * the corner card could. Skip, ✕, Esc and clicking the scrim all skip.
+ */
 function TourPrompt({ onStart, onDismiss }: { onStart: () => void; onDismiss: () => void }) {
-  const titleId = useId()
   return (
-    <div
-      role="dialog"
-      aria-labelledby={titleId}
-      className={cn(SURFACE, 'fixed right-6 bottom-6 z-40 w-80 motion-safe:animate-slide-up-fade')}
-    >
-      <div className="flex flex-col gap-2 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 id={titleId} className="font-medium text-foreground text-sm">
-            New to Nebi projects?
-          </h2>
-          <Button variant="ghost" size="icon-xs" onClick={onDismiss} aria-label="Close">
-            <X />
-          </Button>
-        </div>
-        <p className="text-muted-foreground-strong text-sm">
-          Take a 1-minute tour of this page: versions, installing, sharing and publishing.
-        </p>
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" size="sm" onClick={onDismiss}>
-            Not now
-          </Button>
-          <Button size="sm" onClick={onStart}>
-            Start tour
-          </Button>
-        </div>
-      </div>
-    </div>
+    <Dialog defaultOpen onOpenChange={(open) => !open && onDismiss()}>
+      {/* No focus return on close: Start tour hands focus to the first step's Next. */}
+      <DialogContent className="max-w-[400px]" finalFocus={false}>
+        <DialogHeader>
+          <DialogTitle>New to Nebi projects?</DialogTitle>
+          <DialogDescription>Take a 1-minute tour of this page: versions, installing, sharing and publishing.</DialogDescription>
+        </DialogHeader>
+        <p className="text-muted-foreground text-sm">Not now? You can start it any time from Help.</p>
+        <DialogFooter>
+          <DialogClose render={<Button variant="secondary" />}>Skip</DialogClose>
+          <Button onClick={onStart}>Start tour</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
